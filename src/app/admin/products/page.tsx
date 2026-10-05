@@ -6,8 +6,10 @@ import { ExportCsvButton } from "@/components/admin/ExportCsvButton";
 import { ProductsTable } from "@/components/admin/ProductsTable";
 import { getAdminSession } from "@/lib/admin-auth.server";
 import { headerCtaClassName } from "@/lib/button-styles";
-import { getProducts } from "@/lib/catalog.server";
+import { getAdminProducts } from "@/lib/catalog.server";
 import { buildPageMetadata } from "@/lib/seo";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = buildPageMetadata({
   title: "Admin Products",
@@ -19,7 +21,7 @@ export const metadata = buildPageMetadata({
 export default async function AdminProductsPage() {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
-  const products = await getProducts();
+  const products = await getAdminProducts();
 
   return (
     <AdminShell username={session.username}>

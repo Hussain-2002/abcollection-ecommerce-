@@ -142,12 +142,26 @@ const loadCatalogCached = unstable_cache(resolveCatalog, ["catalog"], {
 /** Dedupes catalog reads within a single request (layout + page). */
 export const getCatalog = cache(loadCatalogCached);
 
+/** Admin reads skip the 60s catalogue cache so a refresh shows the photos just saved. */
+export async function getAdminCatalog(): Promise<Catalog> {
+  return readSupabaseCatalog();
+}
+
 export async function getProducts(): Promise<Product[]> {
   return (await getCatalog()).products;
 }
 
+export async function getAdminProducts(): Promise<Product[]> {
+  return (await getAdminCatalog()).products;
+}
+
 export async function getProductById(id: string): Promise<Product | undefined> {
   const products = await getProducts();
+  return products.find((p) => p.id === id);
+}
+
+export async function getAdminProductById(id: string): Promise<Product | undefined> {
+  const products = await getAdminProducts();
   return products.find((p) => p.id === id);
 }
 

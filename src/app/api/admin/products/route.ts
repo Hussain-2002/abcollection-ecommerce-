@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { requireAdminSession } from "@/lib/admin-auth.server";
-import { getProducts, saveProduct } from "@/lib/catalog.server";
+import { getAdminProducts, saveProduct } from "@/lib/catalog.server";
 import { asProduct, productSchema } from "@/lib/catalog-types";
 
 export async function GET() {
   try {
     await requireAdminSession();
-    const products = await getProducts();
+    const products = await getAdminProducts();
     return NextResponse.json({ products });
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

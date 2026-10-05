@@ -3,8 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { ProductForm } from "@/components/admin/ProductForm";
 import { getAdminSession } from "@/lib/admin-auth.server";
-import { getProductById } from "@/lib/catalog.server";
+import { getAdminProductById } from "@/lib/catalog.server";
 import { buildPageMetadata } from "@/lib/seo";
+
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -22,7 +24,7 @@ export default async function EditProductPage({ params }: Props) {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
   const { id } = await params;
-  const product = await getProductById(id);
+  const product = await getAdminProductById(id);
   if (!product) notFound();
 
   return (

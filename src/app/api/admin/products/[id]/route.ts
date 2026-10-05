@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { requireAdminSession } from "@/lib/admin-auth.server";
-import { deleteProduct, getProductById, saveProduct } from "@/lib/catalog.server";
+import { deleteProduct, getAdminProductById, saveProduct } from "@/lib/catalog.server";
 import { asProduct, productSchema } from "@/lib/catalog-types";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -11,7 +11,7 @@ export async function GET(_: Request, ctx: Ctx) {
   try {
     await requireAdminSession();
     const { id } = await ctx.params;
-    const product = await getProductById(id);
+    const product = await getAdminProductById(id);
     if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ product });
   } catch {
