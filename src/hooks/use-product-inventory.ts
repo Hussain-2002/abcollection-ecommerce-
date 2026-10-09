@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Product, ProductVariant } from "@/lib/catalog-types";
 
 export function useProductInventory(product: Product) {
   const [variants, setVariants] = useState<ProductVariant[]>(product.variants ?? []);
+  const liveFor = useRef<string | null>(null);
 
   useEffect(() => {
+    if (liveFor.current === product.id) return;
     setVariants(product.variants ?? []);
-  }, [product]);
+  }, [product.id, product.variants]);
 
   useEffect(() => {
     let cancelled = false;
@@ -21,6 +23,7 @@ export function useProductInventory(product: Product) {
         if (!res.ok || cancelled) return;
         const data = (await res.json()) as { variants?: ProductVariant[] };
         if (!cancelled && Array.isArray(data.variants)) {
+          liveFor.current = product.id;
           setVariants(
             data.variants.map((row) => ({
               id: row.id,
@@ -36,7 +39,7 @@ export function useProductInventory(product: Product) {
       }
     };
 
-    if (!product.variants?.length) void load();
+    void load();
 
     const onFocus = () => {
       if (document.visibilityState === "visible") void load();
@@ -48,7 +51,7 @@ export function useProductInventory(product: Product) {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
     };
-  }, [product.id, product.variants?.length]);
+  }, [product.id]);
 
   return useMemo(() => ({ ...product, variants }), [product, variants]);
 }

@@ -53,12 +53,10 @@ export default async function AdminDashboardPage() {
         <div className="rounded-3xl border border-border bg-white p-6">
           <p className="text-sm text-muted-foreground">Products</p>
           <p className="mt-2 font-display text-4xl font-bold">{catalog.products.length}</p>
-          <Link
-            href="/admin/products"
-            className="mt-4 inline-block text-sm font-semibold text-teal"
-          >
-            Manage products →
-          </Link>
+          <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold text-teal">
+            <Link href="/admin/products">Manage products →</Link>
+            <Link href="/admin/stock">Manage stock →</Link>
+          </div>
         </div>
         <div className="rounded-3xl border border-border bg-white p-6">
           <p className="text-sm text-muted-foreground">Bundles & shipping</p>
