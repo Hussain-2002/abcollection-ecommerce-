@@ -59,7 +59,7 @@ function addressAlert(errors: Partial<Record<AddressField, string>>) {
   return `Please fill in your ${missing.slice(0, -1).join(", ")} and ${last}.`;
 }
 
-function FieldAlert({ message }: { message?: string }) {
+function FieldAlert({ message }: { message?: string | undefined }) {
   if (!message) return null;
   return (
     <p className="mt-1.5 text-xs text-destructive" role="alert">
