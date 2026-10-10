@@ -33,7 +33,10 @@ export function actionErrorMessage(error: unknown, fallback: string) {
   if (err?.name === "ZodError" || Array.isArray(err?.issues)) {
     return {
       status: 400,
-      message: issueText(err.issues?.find((issue) => issue.message || issue.path), fallback),
+      message: issueText(
+        err.issues?.find((issue) => issue.message || issue.path),
+        fallback,
+      ),
     };
   }
   return {
