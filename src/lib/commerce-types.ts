@@ -22,11 +22,15 @@ export const profileUpdateSchema = z.object({
 
 export const addressSchema = z.object({
   id: z.string().uuid().optional(),
-  label: z.string().trim().min(1).max(40).default("Home"),
-  line1: z.string().trim().min(3).max(200),
+  label: z
+    .string({ required_error: "Add a name for this address, such as Home." })
+    .trim()
+    .min(1, "Add a name for this address, such as Home.")
+    .max(40),
+  line1: z.string().trim().min(3, "Enter your street address.").max(200),
   line2: z.string().trim().max(200).optional().or(z.literal("")),
-  city: z.string().trim().min(2).max(80),
-  state: z.string().trim().min(2).max(80),
+  city: z.string().trim().min(2, "Enter your city.").max(80),
+  state: z.string().trim().min(2, "Enter your state.").max(80),
   pincode: z
     .string()
     .trim()

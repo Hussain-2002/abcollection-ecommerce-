@@ -4,6 +4,7 @@ import { createCashfreeOrder, getCashfreeConfig } from "@/lib/cashfree.server";
 import { quoteCheckout } from "@/lib/commerce.server";
 import { checkoutSchema } from "@/lib/commerce-types";
 import { getCustomerSession } from "@/lib/customer-auth.server";
+import { actionErrorMessage } from "@/lib/form-request";
 import { normalizeMobile } from "@/lib/reservation-utils";
 
 export const dynamic = "force-dynamic";
@@ -85,10 +86,7 @@ export async function POST(request: Request) {
       paymentSessionId: cashfree.payment_session_id,
     });
   } catch (error) {
-    const err = error as Error & { status?: number };
-    return NextResponse.json(
-      { error: err.message || "Could not start payment." },
-      { status: err.status ?? (err.name === "ZodError" ? 400 : 500) },
-    );
+    const { status, message } = actionErrorMessage(error, "Could not start payment.");
+    return NextResponse.json({ error: message }, { status });
   }
 }

@@ -27,6 +27,47 @@ import { formatInr } from "@/lib/price";
 import { istefadaUnitOff, resolveIstefadaDiscount } from "@/lib/istefada-offer";
 import { apiErrorMessage, readJsonBody } from "@/lib/form-request";
 
+const ADDRESS_FIELDS = ["label", "line1", "city", "state", "pincode"] as const;
+type AddressField = (typeof ADDRESS_FIELDS)[number];
+
+const ADDRESS_FIELD_NAME: Record<AddressField, string> = {
+  label: "address label",
+  line1: "street address",
+  city: "city",
+  state: "state",
+  pincode: "PIN code",
+};
+
+function addressFieldErrors(values: Record<AddressField, string>) {
+  const errors: Partial<Record<AddressField, string>> = {};
+  if (!values.label.trim()) errors.label = "Add a name for this address, such as Home.";
+  if (values.line1.trim().length < 3) errors.line1 = "Enter your street address.";
+  if (values.city.trim().length < 2) errors.city = "Enter your city.";
+  if (values.state.trim().length < 2) errors.state = "Enter your state.";
+  if (!/^\d{6}$/.test(values.pincode.trim())) {
+    errors.pincode = "Enter a valid 6-digit PIN code.";
+  }
+  return errors;
+}
+
+function addressAlert(errors: Partial<Record<AddressField, string>>) {
+  const missing = ADDRESS_FIELDS.filter((field) => errors[field]).map(
+    (field) => ADDRESS_FIELD_NAME[field],
+  );
+  if (missing.length === 1) return `Please fill in your ${missing[0]}.`;
+  const last = missing[missing.length - 1];
+  return `Please fill in your ${missing.slice(0, -1).join(", ")} and ${last}.`;
+}
+
+function FieldAlert({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p className="mt-1.5 text-xs text-destructive" role="alert">
+      {message}
+    </p>
+  );
+}
+
 export default function CheckoutClient() {
   const router = useRouter();
   const params = useSearchParams();
@@ -52,6 +93,7 @@ export default function CheckoutClient() {
   const [placing, setPlacing] = useState(false);
   const [confirmed, setConfirmed] = useState<{ orderNumber: string; paid: boolean } | null>(null);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<AddressField, string>>>({});
   const [issues, setIssues] = useState<CartIssue[]>([]);
   const [couponInput, setCouponInput] = useState("");
   const [couponQuote, setCouponQuote] = useState<{
@@ -164,9 +206,32 @@ export default function CheckoutClient() {
     }
   };
 
+  const clearFieldError = (field: AddressField) => {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  };
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!customer || submittingRef.current) return;
+    if (useNewAddress || !selectedAddressId) {
+      const nextErrors = addressFieldErrors({ label, line1, city, state, pincode });
+      const firstInvalid = ADDRESS_FIELDS.find((field) => nextErrors[field]);
+      if (firstInvalid) {
+        setFieldErrors(nextErrors);
+        setError(addressAlert(nextErrors));
+        setIssues([]);
+        const field = document.getElementById(firstInvalid);
+        field?.focus();
+        field?.scrollIntoView({ block: "center", behavior: "smooth" });
+        return;
+      }
+    }
+    setFieldErrors({});
     submittingRef.current = true;
     setSubmitting(true);
     setError("");
@@ -196,7 +261,7 @@ export default function CheckoutClient() {
               ...(submittedPromo ? { promoCode: submittedPromo } : {}),
               ...(checkoutId ? { checkoutId } : {}),
               address: {
-                label,
+                label: label.trim(),
                 line1,
                 line2,
                 city,
@@ -377,6 +442,7 @@ export default function CheckoutClient() {
 
       <form
         onSubmit={submit}
+        noValidate
         aria-busy={submitting}
         className="mt-10 grid min-w-0 gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]"
       >
@@ -451,14 +517,26 @@ export default function CheckoutClient() {
               </div>
             ) : (
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {Object.keys(fieldErrors).length ? (
+                  <p className="text-sm text-destructive sm:col-span-2" role="alert">
+                    {error}
+                  </p>
+                ) : null}
                 <div className="sm:col-span-2">
                   <Label htmlFor="label">Label</Label>
                   <Input
                     id="label"
+                    required
                     value={label}
-                    onChange={(e) => setLabel(e.target.value)}
-                    className="mt-1.5 h-11 rounded-full"
+                    aria-invalid={Boolean(fieldErrors.label)}
+                    onChange={(e) => {
+                      setLabel(e.target.value);
+                      clearFieldError("label");
+                    }}
+                    placeholder="Home"
+                    className={`mt-1.5 h-11 rounded-full ${fieldErrors.label ? "border-destructive" : ""}`}
                   />
+                  <FieldAlert message={fieldErrors.label} />
                 </div>
                 <div className="sm:col-span-2">
                   <Label htmlFor="line1">Address line 1</Label>
@@ -466,12 +544,17 @@ export default function CheckoutClient() {
                     id="line1"
                     required
                     value={line1}
-                    onChange={(e) => setLine1(e.target.value)}
-                    className="mt-1.5 h-11 rounded-full"
+                    aria-invalid={Boolean(fieldErrors.line1)}
+                    onChange={(e) => {
+                      setLine1(e.target.value);
+                      clearFieldError("line1");
+                    }}
+                    className={`mt-1.5 h-11 rounded-full ${fieldErrors.line1 ? "border-destructive" : ""}`}
                   />
+                  <FieldAlert message={fieldErrors.line1} />
                 </div>
                 <div className="sm:col-span-2">
-                  <Label htmlFor="line2">Address line 2</Label>
+                  <Label htmlFor="line2">Address line 2 (optional)</Label>
                   <Input
                     id="line2"
                     value={line2}
@@ -485,9 +568,14 @@ export default function CheckoutClient() {
                     id="city"
                     required
                     value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="mt-1.5 h-11 rounded-full"
+                    aria-invalid={Boolean(fieldErrors.city)}
+                    onChange={(e) => {
+                      setCity(e.target.value);
+                      clearFieldError("city");
+                    }}
+                    className={`mt-1.5 h-11 rounded-full ${fieldErrors.city ? "border-destructive" : ""}`}
                   />
+                  <FieldAlert message={fieldErrors.city} />
                 </div>
                 <div>
                   <Label htmlFor="state">State</Label>
@@ -495,19 +583,30 @@ export default function CheckoutClient() {
                     id="state"
                     required
                     value={state}
-                    onChange={(e) => setState(e.target.value)}
-                    className="mt-1.5 h-11 rounded-full"
+                    aria-invalid={Boolean(fieldErrors.state)}
+                    onChange={(e) => {
+                      setState(e.target.value);
+                      clearFieldError("state");
+                    }}
+                    className={`mt-1.5 h-11 rounded-full ${fieldErrors.state ? "border-destructive" : ""}`}
                   />
+                  <FieldAlert message={fieldErrors.state} />
                 </div>
                 <div>
                   <Label htmlFor="pincode">PIN code</Label>
                   <Input
                     id="pincode"
                     required
+                    inputMode="numeric"
                     value={pincode}
-                    onChange={(e) => setPincode(e.target.value)}
-                    className="mt-1.5 h-11 rounded-full"
+                    aria-invalid={Boolean(fieldErrors.pincode)}
+                    onChange={(e) => {
+                      setPincode(e.target.value);
+                      clearFieldError("pincode");
+                    }}
+                    className={`mt-1.5 h-11 rounded-full ${fieldErrors.pincode ? "border-destructive" : ""}`}
                   />
+                  <FieldAlert message={fieldErrors.pincode} />
                 </div>
               </div>
             )}

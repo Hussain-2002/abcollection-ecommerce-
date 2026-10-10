@@ -4,6 +4,7 @@ import { getCashfreeConfig, verifyCashfreePayment } from "@/lib/cashfree.server"
 import { listOrdersForCustomer, placeOrder, quoteCheckout } from "@/lib/commerce.server";
 import { checkoutSchema } from "@/lib/commerce-types";
 import { getCustomerSession } from "@/lib/customer-auth.server";
+import { actionErrorMessage } from "@/lib/form-request";
 import { notifyOrderEvent } from "@/lib/notifications.server";
 import { withExpectedDelivery } from "@/lib/order-tracking.server";
 
@@ -63,10 +64,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ order });
   } catch (error) {
-    const err = error as Error & { status?: number };
-    return NextResponse.json(
-      { error: err.message || "Could not place order." },
-      { status: err.status ?? (err.name === "ZodError" ? 400 : 500) },
-    );
+    const { status, message } = actionErrorMessage(error, "Could not place order.");
+    return NextResponse.json({ error: message }, { status });
   }
 }

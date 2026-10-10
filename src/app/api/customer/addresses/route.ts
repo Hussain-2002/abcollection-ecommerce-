@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { deleteAddress, listAddresses, saveAddress } from "@/lib/commerce.server";
 import { addressSchema } from "@/lib/commerce-types";
 import { getCustomerSession } from "@/lib/customer-auth.server";
+import { actionErrorMessage } from "@/lib/form-request";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +22,8 @@ export async function POST(request: Request) {
     const address = await saveAddress(session.id, body);
     return NextResponse.json({ address });
   } catch (error) {
-    const err = error as Error & { status?: number };
-    return NextResponse.json(
-      { error: err.message || "Could not save address." },
-      { status: err.status ?? (err.name === "ZodError" ? 400 : 500) },
-    );
+    const { status, message } = actionErrorMessage(error, "Could not save address.");
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
