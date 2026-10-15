@@ -31,6 +31,8 @@ import type { ReviewListing } from "@/lib/reviews";
 import type { DeliveryEstimate } from "@/lib/shipping";
 import type { BundleOfferView } from "@/lib/store-offers";
 import { cn } from "@/lib/utils";
+import { META_CURRENCY, fbqTrack } from "@/lib/meta-pixel";
+import { parsePriceInr } from "@/lib/price";
 
 export function ProductDetail({
   product,
@@ -66,6 +68,16 @@ export function ProductDetail({
   useEffect(() => {
     setQuantity((current) => Math.min(current, maxQty));
   }, [maxQty]);
+
+  useEffect(() => {
+    fbqTrack("ViewContent", {
+      content_ids: [product.id],
+      content_name: product.name,
+      content_type: "product",
+      value: parsePriceInr(product.price),
+      currency: META_CURRENCY,
+    });
+  }, [product.id, product.name, product.price]);
 
   const selectColor = (color: string) => {
     setSelectedColor(color);

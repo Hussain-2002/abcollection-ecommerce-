@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiErrorMessage, readJsonBody } from "@/lib/form-request";
+import { fbqTrack } from "@/lib/meta-pixel";
 import type { CartItemInput, CartLine, CustomerPublic, WishlistItem } from "@/lib/commerce-types";
 
 export type AuthSuccessPayload = {
@@ -65,6 +66,9 @@ export function AuthModal({
         return;
       }
       setPassword("");
+      if (mode === "signup") {
+        fbqTrack("CompleteRegistration", { status: true, content_name: "Customer signup" });
+      }
       onOpenChange(false);
       void onSuccess({
         customer: data.customer,

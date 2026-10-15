@@ -13,6 +13,7 @@ import type { ReservationResult } from "@/lib/api-types";
 import { apiErrorMessage, readJsonBody } from "@/lib/form-request";
 import { makeReservationId } from "@/lib/reservation-utils";
 import { readEarlyAccessEmail } from "@/lib/early-access";
+import { fbqTrack } from "@/lib/meta-pixel";
 import { useCatalog } from "@/components/site/CatalogProvider";
 
 type Props = {
@@ -210,6 +211,7 @@ export function RegisterDialog({ open, onOpenChange, product }: Props) {
       if (payload.status === "duplicate") {
         setDuplicate({ reservationId: payload.reservationId });
       } else {
+        fbqTrack("Lead", { content_name: "Reservation", num_items: items.length });
         setDone({ reservationId: payload.reservationId });
       }
     } catch (error) {

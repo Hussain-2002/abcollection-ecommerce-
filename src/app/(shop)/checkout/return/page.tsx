@@ -9,6 +9,7 @@ import { OrderPlaced } from "@/components/commerce/OrderPlaced";
 import { BUY_NOW_KEY, CHECKOUT_DRAFT_KEY } from "@/lib/commerce-constants";
 import type { CheckoutInput, Order } from "@/lib/commerce-types";
 import { apiErrorMessage, readJsonBody } from "@/lib/form-request";
+import { fbqTrackPurchase } from "@/lib/meta-pixel";
 
 function ReturnInner() {
   const router = useRouter();
@@ -45,6 +46,7 @@ function ReturnInner() {
         sessionStorage.removeItem(CHECKOUT_DRAFT_KEY);
         sessionStorage.removeItem(BUY_NOW_KEY);
         setConfirmed({ orderNumber: data.order.orderNumber, paid: true });
+        fbqTrackPurchase(data.order);
         router.replace(
           `/checkout/success?order=${encodeURIComponent(data.order.orderNumber)}&paid=1`,
         );

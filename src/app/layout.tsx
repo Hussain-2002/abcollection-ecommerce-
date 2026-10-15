@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Inter } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { GoogleAnalytics } from "@/components/site/GoogleAnalytics";
+import { MetaPixelPageView } from "@/components/site/MetaPixelPageView";
 import { canonicalUrl } from "@/lib/canonical-url";
 import { JsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
@@ -97,6 +98,7 @@ fbq('track', 'PageView');`,
       </head>
       <body>
         <GoogleAnalytics />
+        <MetaPixelPageView />
         <JsonLd data={[organizationJsonLd(), websiteJsonLd()]} />
         {children}
       </body>

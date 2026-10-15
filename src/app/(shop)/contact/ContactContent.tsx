@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FormAlert } from "@/components/site/FormAlert";
+import { fbqTrack } from "@/lib/meta-pixel";
 import { apiErrorMessage, readJsonBody } from "@/lib/form-request";
 import { SITE_EMAIL, SITE_INSTAGRAM } from "@/lib/site";
 
@@ -42,6 +43,7 @@ export function ContactContent() {
         toast.error(nextError);
         return;
       }
+      fbqTrack("Lead", { content_name: "Contact form" });
       toast.success("Message sent. We'll get back to you shortly.");
       setName("");
       setEmail("");

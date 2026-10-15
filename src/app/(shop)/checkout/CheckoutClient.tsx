@@ -24,6 +24,7 @@ import { loadCashfreeCheckout } from "@/lib/cashfree-checkout";
 import { BUY_NOW_KEY, CHECKOUT_DRAFT_KEY } from "@/lib/commerce-constants";
 import type { CartItemInput, CheckoutInput, CustomerAddress, Order } from "@/lib/commerce-types";
 import { formatInr } from "@/lib/price";
+import { META_CURRENCY, fbqTrack, fbqTrackPurchase } from "@/lib/meta-pixel";
 import { istefadaUnitOff, resolveIstefadaDiscount } from "@/lib/istefada-offer";
 import { apiErrorMessage, readJsonBody } from "@/lib/form-request";
 
@@ -161,6 +162,20 @@ export default function CheckoutClient() {
   const previewDiscount = couponQuote?.ok ? couponQuote.discount : istefadaDiscount;
   const previewCode = couponQuote?.ok ? couponQuote.code : hasOffer ? promoCode : "";
   const total = Math.max(0, subtotal - previewDiscount);
+  const initiateTracked = useRef(false);
+
+  useEffect(() => {
+    if (initiateTracked.current || loading || lines.length === 0) return;
+    initiateTracked.current = true;
+    fbqTrack("InitiateCheckout", {
+      value: total,
+      currency: META_CURRENCY,
+      num_items: lines.reduce((sum, line) => sum + line.quantity, 0),
+      content_ids: lines.map((line) => line.productId),
+      contents: lines.map((line) => ({ id: line.productId, quantity: line.quantity })),
+      content_type: "product",
+    });
+  }, [loading, lines, total]);
 
   const applyCoupon = async () => {
     if (couponBusy) return;
@@ -318,6 +333,7 @@ export default function CheckoutClient() {
         setPlacing(true);
         const paid = data.order.paymentStatus === "paid";
         setConfirmed({ orderNumber: data.order.orderNumber, paid });
+        fbqTrackPurchase(data.order);
         sessionStorage.removeItem(BUY_NOW_KEY);
         sessionStorage.removeItem(CHECKOUT_DRAFT_KEY);
         router.replace(
@@ -344,6 +360,12 @@ export default function CheckoutClient() {
       }
 
       setPaying(true);
+      fbqTrack("AddPaymentInfo", {
+        value: total,
+        currency: META_CURRENCY,
+        content_ids: lines.map((line) => line.productId),
+        content_type: "product",
+      });
       const cashfree = await loadCashfreeCheckout(
         payData.mode === "production" ? "production" : "sandbox",
       );

@@ -11,6 +11,7 @@ import { FormAlert } from "@/components/site/FormAlert";
 import { apiErrorMessage, readJsonBody } from "@/lib/form-request";
 import { LEGAL_NAV_LINKS } from "@/lib/legal/content";
 import { NAV_LINKS, SITE_EMAIL, SITE_INSTAGRAM } from "@/lib/site";
+import { fbqTrack } from "@/lib/meta-pixel";
 
 export function SiteFooter() {
   const [email, setEmail] = useState("");
@@ -35,6 +36,7 @@ export function SiteFooter() {
         toast.error(nextError);
         return;
       }
+      fbqTrack("Lead", { content_name: "Footer newsletter" });
       toast.success("You're on the list.");
       setEmail("");
     } catch {

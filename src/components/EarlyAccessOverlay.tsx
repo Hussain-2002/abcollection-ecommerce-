@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { apiErrorMessage, readJsonBody } from "@/lib/form-request";
 import type { EarlyAccessResult } from "@/lib/api-types";
 import { isEarlyAccessUnlocked, saveEarlyAccess, trackEvent } from "@/lib/early-access";
+import { fbqTrack } from "@/lib/meta-pixel";
 
 const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
@@ -97,6 +98,7 @@ export function EarlyAccessOverlay({ forceOpen = false, onClose, onEmailCaptured
       trackEvent(
         payload.status === "existing" ? "early_access_duplicate" : "early_access_submitted",
       );
+      if (payload.status !== "existing") fbqTrack("Lead", { content_name: "Early access" });
       setSuccess(true);
       window.setTimeout(close, 1400);
     } catch (err) {

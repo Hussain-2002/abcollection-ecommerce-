@@ -21,6 +21,8 @@ import {
   GUEST_CART_KEY,
 } from "@/lib/commerce-constants";
 import { guestLineKey } from "@/lib/cart-display";
+import { META_CURRENCY, fbqTrack } from "@/lib/meta-pixel";
+import { parsePriceInr } from "@/lib/price";
 import { availableStock, quantityCap, stockShortageMessage } from "@/lib/inventory";
 import { safeInternalPath } from "@/lib/safe-redirect";
 import type {
@@ -80,6 +82,22 @@ type CommerceContextValue = {
 };
 
 const CommerceContext = createContext<CommerceContextValue | null>(null);
+
+function metaProductParams(
+  productId: string,
+  product: { name: string; price: string } | undefined,
+  quantity = 1,
+) {
+  const price = product ? parsePriceInr(product.price) : 0;
+  return {
+    content_ids: [productId],
+    content_name: product?.name,
+    content_type: "product",
+    contents: [{ id: productId, quantity }],
+    value: price * quantity,
+    currency: META_CURRENCY,
+  };
+}
 
 function readGuestCart(): CartItemInput[] {
   if (typeof window === "undefined") return [];
@@ -211,6 +229,7 @@ export function CommerceProvider({ children }: { children: ReactNode }) {
           }
           writeGuestCart(next);
           setGuestCart(next);
+          fbqTrack("AddToCart", metaProductParams(item.productId, product, item.quantity));
           if (!opts?.silent) toast.success("Added to cart");
           if (!opts?.skipDrawer) openCart();
           return { ok: true };
@@ -228,6 +247,14 @@ export function CommerceProvider({ children }: { children: ReactNode }) {
           return { ok: false, error };
         }
         setCart(data.items ?? []);
+        fbqTrack(
+          "AddToCart",
+          metaProductParams(
+            item.productId,
+            products.find((row) => row.id === item.productId),
+            item.quantity,
+          ),
+        );
         if (!opts?.silent) toast.success("Added to cart");
         if (!opts?.skipDrawer) openCart();
         return { ok: true };
@@ -499,6 +526,15 @@ export function CommerceProvider({ children }: { children: ReactNode }) {
           return;
         }
         setWishlist(data.items ?? []);
+        if (!exists) {
+          fbqTrack(
+            "AddToWishlist",
+            metaProductParams(
+              productId,
+              products.find((row) => row.id === productId),
+            ),
+          );
+        }
         toast.success(exists ? "Removed from wishlist" : "Added to wishlist");
       } catch {
         toast.error("Could not update wishlist");
@@ -506,7 +542,7 @@ export function CommerceProvider({ children }: { children: ReactNode }) {
         wishlistLocks.current.delete(productId);
       }
     },
-    [customer, openAuth, wishlist],
+    [customer, openAuth, products, wishlist],
   );
 
   const moveWishlistToCart = useCallback(
@@ -541,6 +577,13 @@ export function CommerceProvider({ children }: { children: ReactNode }) {
         if (res.ok) {
           const data = (await res.json()) as { items?: WishlistItem[] };
           setWishlist(data.items ?? payload.wishlist);
+          fbqTrack(
+            "AddToWishlist",
+            metaProductParams(
+              intent.productId,
+              products.find((row) => row.id === intent.productId),
+            ),
+          );
         }
         toast.success("Added to wishlist");
         router.push("/account/wishlist");
@@ -565,7 +608,7 @@ export function CommerceProvider({ children }: { children: ReactNode }) {
 
       router.push("/");
     },
-    [authIntent, closeAuth, router],
+    [authIntent, closeAuth, products, router],
   );
 
   const cartCount = customer
