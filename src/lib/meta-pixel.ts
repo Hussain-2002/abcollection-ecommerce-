@@ -41,14 +41,41 @@ export function fbqTrackCustom(event: string, params?: FbqParams, options?: FbqO
   }
 }
 
-/** Send a shopper click to the pixel. Standard commerce events stay separate. */
+/**
+ * These actions already send their own Meta event (AddToCart, AddToWishlist,
+ * InitiateCheckout, AddPaymentInfo). A second event named Click would hide them.
+ */
+function hasDedicatedMetaEvent(label: string) {
+  return /^(add to cart|adding\.\.\.|added\b.*|try again|add to wishlist|buy now|checkout|pay\b.*)$/i.test(
+    label.trim(),
+  );
+}
+
+/** Meta custom event names: letters, numbers, spaces, hyphens, underscores. */
+function metaEventName(label: string) {
+  const name = label
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[^A-Za-z0-9 _-]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 50);
+  const generic = new Set(["click", "button", "a", "input", "link"]);
+  if (name.length < 2 || generic.has(name.toLowerCase())) return "";
+  return name;
+}
+
+/** Name the pixel event after the control. Never send a generic Click event. */
 export function fbqTrackClick(label: string, path: string, destination?: string | undefined) {
+  if (hasDedicatedMetaEvent(label)) return;
+  const eventName = metaEventName(label);
+  if (!eventName) return;
   const params: FbqParams = {
     content_name: label.slice(0, 120),
     content_category: path.slice(0, 200),
   };
   if (destination) params["destination"] = destination.slice(0, 500);
-  fbqTrackCustom("Click", params);
+  fbqTrackCustom(eventName, params);
 }
 
 const PURCHASE_KEY_PREFIX = "ab_meta_purchase_";
