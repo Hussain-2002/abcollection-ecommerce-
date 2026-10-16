@@ -10,6 +10,7 @@ import {
   trackClick,
   trackPageView,
 } from "@/lib/analytics.client";
+import { fbqTrackClick } from "@/lib/meta-pixel";
 
 export function AnalyticsTracker() {
   const pathname = usePathname();
@@ -31,14 +32,25 @@ export function AnalyticsTracker() {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
 
-      const clickable = target.closest("a[href], [data-track]");
-      if (!(clickable instanceof HTMLElement)) return;
-      if (clickable.closest("[data-analytics-ignore]")) return;
+      if (target.closest("[data-analytics-ignore]")) return;
 
       const currentPath = window.location.pathname;
-      const label = resolveClickLabel(clickable);
-      const destination = resolveClickTarget(clickable);
-      trackClick(currentPath, label, destination);
+      if (currentPath.startsWith("/admin")) return;
+
+      const metaClickable = target.closest(
+        "a[href], button, [role='button'], input[type='submit'], input[type='button'], [data-track]",
+      );
+      if (metaClickable instanceof HTMLElement) {
+        fbqTrackClick(
+          resolveClickLabel(metaClickable),
+          currentPath,
+          resolveClickTarget(metaClickable),
+        );
+      }
+
+      const clickable = target.closest("a[href], [data-track]");
+      if (!(clickable instanceof HTMLElement)) return;
+      trackClick(currentPath, resolveClickLabel(clickable), resolveClickTarget(clickable));
     };
 
     document.addEventListener("click", onClick, true);

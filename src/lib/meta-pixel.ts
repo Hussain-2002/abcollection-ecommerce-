@@ -41,6 +41,16 @@ export function fbqTrackCustom(event: string, params?: FbqParams, options?: FbqO
   }
 }
 
+/** Send a shopper click to the pixel. Standard commerce events stay separate. */
+export function fbqTrackClick(label: string, path: string, destination?: string | undefined) {
+  const params: FbqParams = {
+    content_name: label.slice(0, 120),
+    content_category: path.slice(0, 200),
+  };
+  if (destination) params["destination"] = destination.slice(0, 500);
+  fbqTrackCustom("Click", params);
+}
+
 const PURCHASE_KEY_PREFIX = "ab_meta_purchase_";
 
 /** Fire Purchase once per order (guarded with sessionStorage + eventID dedupe). */
