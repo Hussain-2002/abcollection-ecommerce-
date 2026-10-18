@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { createCashfreeOrder, getCashfreeConfig } from "@/lib/cashfree.server";
-import { quoteCheckout } from "@/lib/commerce.server";
+import {
+  createCashfreeOrder,
+  getCashfreeConfig,
+  requestStorefrontOrigin,
+} from "@/lib/cashfree.server";
+import { placeOrder, quoteCheckout, rememberGatewayOrder } from "@/lib/commerce.server";
 import { checkoutSchema } from "@/lib/commerce-types";
 import { getCustomerSession } from "@/lib/customer-auth.server";
 import { actionErrorMessage } from "@/lib/form-request";
@@ -26,6 +30,13 @@ export async function POST(request: Request) {
     if (quote.totalAmount <= 0) {
       return NextResponse.json({ skipPayment: true, amount: 0 });
     }
+
+    // Save the order before Cashfree takes payment, so a successful payment
+    // still shows in the admin orders tab if the browser never returns.
+    const reserved = await placeOrder(session, body, {
+      paymentStatus: "pending",
+      paymentMethod: "cashfree",
+    });
 
     const config = getCashfreeConfig();
     if (!config.configured) {
@@ -53,7 +64,13 @@ export async function POST(request: Request) {
       customerName: session.fullName,
       customerEmail: session.email,
       customerPhone: phone,
+      returnOrigin: requestStorefrontOrigin(request),
     });
+    if (cashfree.order_id) {
+      await rememberGatewayOrder(reserved.order.id, cashfree.order_id).catch((error) => {
+        console.error("[orders] could not store Cashfree order id", error);
+      });
+    }
     if (!cashfree.order_id) {
       return NextResponse.json(
         { error: cashfree.message || "Could not start Cashfree checkout." },

@@ -14,6 +14,24 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(100),
 });
 
+export const passwordResetSendSchema = z.object({
+  email: z.string().trim().email().max(200),
+});
+
+export const passwordResetConfirmSchema = z.object({
+  email: z.string().trim().email().max(200),
+  otp: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Enter the 6-digit code from your email."),
+  password: z.string().min(8, "Use at least 8 characters.").max(100),
+  resetToken: z
+    .string()
+    .trim()
+    .min(20, "That code is incorrect or has expired.")
+    .max(2000, "That code is incorrect or has expired."),
+});
+
 export const profileUpdateSchema = z.object({
   fullName: z.string().trim().min(2).max(120),
   phone: z.string().trim().min(10).max(15),

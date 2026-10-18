@@ -374,8 +374,10 @@ export default function CheckoutClient() {
         redirectTarget: "_modal",
       });
       setPaying(false);
-      if (result?.error?.message) {
-        setError(result.error.message);
+      const cashfreeMessage = result?.error?.message?.trim() ?? "";
+      const paymentAborted = /abort|cancelled|canceled|closed|dismiss/i.test(cashfreeMessage);
+      if (paymentAborted) {
+        setError("Payment was cancelled.");
         return;
       }
       setPlacing(true);

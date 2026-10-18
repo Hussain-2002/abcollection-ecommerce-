@@ -34,13 +34,33 @@ export function AuthModal({
   onSuccess: (payload: AuthSuccessPayload) => void | Promise<void>;
   guestCart: CartItemInput[];
 }) {
-  const [mode, setMode] = useState<"login" | "signup">("signup");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot" | "reset">("signup");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [resetToken, setResetToken] = useState("");
+
+  const sendResetCode = async () => {
+    const res = await fetch("/api/customer/password-reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step: "send", email }),
+    });
+    const data = await readJsonBody<{ resetToken?: string; message?: string; error?: string }>(res);
+    if (!res.ok) {
+      setError(apiErrorMessage(data, "Could not send the code."));
+      return;
+    }
+    if (data.resetToken) setResetToken(data.resetToken);
+    setNotice(data.message || "If an account exists for that email, we sent a 6-digit code.");
+    setMode("reset");
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -48,6 +68,37 @@ export function AuthModal({
     setLoading(true);
     setError("");
     try {
+      if (mode === "forgot") {
+        await sendResetCode();
+        return;
+      }
+      if (mode === "reset") {
+        if (password !== confirmPassword) {
+          setError("Passwords do not match.");
+          return;
+        }
+        const res = await fetch("/api/customer/password-reset", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ step: "confirm", email, otp, password, resetToken }),
+        });
+        const data = await readJsonBody<AuthSuccessPayload & { error?: string }>(res);
+        if (!res.ok || !data.customer) {
+          setError(apiErrorMessage(data, "Could not reset the password."));
+          return;
+        }
+        setPassword("");
+        setConfirmPassword("");
+        setOtp("");
+        onOpenChange(false);
+        void onSuccess({
+          customer: data.customer,
+          cart: data.cart ?? [],
+          wishlist: data.wishlist ?? [],
+        });
+        return;
+      }
+
       const res = await fetch("/api/customer/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -88,12 +139,22 @@ export function AuthModal({
         <div className="px-6 pt-6 pb-2">
           <DialogHeader>
             <DialogTitle className="font-display text-3xl">
-              {mode === "signup" ? "Create account" : "Welcome back"}
+              {mode === "signup"
+                ? "Create account"
+                : mode === "forgot"
+                  ? "Forgot password"
+                  : mode === "reset"
+                    ? "Reset password"
+                    : "Welcome back"}
             </DialogTitle>
             <DialogDescription>
               {mode === "signup"
                 ? "Sign up to checkout, track orders, and save your wishlist."
-                : "Log in to continue to checkout and your account."}
+                : mode === "forgot"
+                  ? "Enter your email and we will send a 6-digit code."
+                  : mode === "reset"
+                    ? "Enter the code from your email and choose a new password."
+                    : "Log in to continue to checkout and your account."}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -137,19 +198,76 @@ export function AuthModal({
             />
           </div>
 
-          <div>
-            <Label htmlFor="auth-password">Password</Label>
-            <Input
-              id="auth-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={mode === "signup" ? 8 : 1}
-              className="mt-1.5 h-11 rounded-full"
-            />
-          </div>
+          {mode === "reset" ? (
+            <div>
+              <Label htmlFor="auth-otp">Email code</Label>
+              <Input
+                id="auth-otp"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                required
+                minLength={6}
+                maxLength={6}
+                placeholder="6-digit code"
+                className="mt-1.5 h-11 rounded-full tracking-[0.2em]"
+              />
+            </div>
+          ) : null}
 
+          {mode === "forgot" ? null : (
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="auth-password">
+                  {mode === "reset" ? "New password" : "Password"}
+                </Label>
+                {mode === "login" ? (
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-teal underline-offset-4 hover:underline"
+                    onClick={() => {
+                      setMode("forgot");
+                      setError("");
+                      setNotice("");
+                    }}
+                  >
+                    Forgot password?
+                  </button>
+                ) : null}
+              </div>
+              <Input
+                id="auth-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={mode === "login" ? 1 : 8}
+                className="mt-1.5 h-11 rounded-full"
+              />
+            </div>
+          )}
+
+          {mode === "reset" ? (
+            <div>
+              <Label htmlFor="auth-confirm">Confirm password</Label>
+              <Input
+                id="auth-confirm"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+                className="mt-1.5 h-11 rounded-full"
+              />
+            </div>
+          ) : null}
+
+          {notice ? (
+            <p className="text-sm text-teal" role="status">
+              {notice}
+            </p>
+          ) : null}
           {error ? (
             <p className="text-sm text-destructive" role="alert">
               {error}
@@ -165,23 +283,60 @@ export function AuthModal({
               <Loader2 className="size-4 animate-spin" />
             ) : mode === "signup" ? (
               "Create account"
+            ) : mode === "forgot" ? (
+              "Send code"
+            ) : mode === "reset" ? (
+              "Reset password"
             ) : (
               "Log in"
             )}
           </Button>
 
-          <p className="text-center text-sm text-muted-foreground">
-            {mode === "signup" ? "Already have an account?" : "New here?"}{" "}
+          {mode === "reset" ? (
             <button
               type="button"
-              className="font-medium text-foreground underline-offset-4 hover:underline"
+              className="w-full text-center text-xs font-medium text-muted-foreground underline-offset-4 hover:underline"
+              disabled={loading}
               onClick={() => {
-                setMode(mode === "signup" ? "login" : "signup");
+                if (loading) return;
+                setLoading(true);
                 setError("");
+                void sendResetCode().finally(() => setLoading(false));
               }}
             >
-              {mode === "signup" ? "Log in" : "Create account"}
+              Resend code
             </button>
+          ) : null}
+
+          <p className="text-center text-sm text-muted-foreground">
+            {mode === "forgot" || mode === "reset" ? (
+              <button
+                type="button"
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+                onClick={() => {
+                  setMode("login");
+                  setError("");
+                  setNotice("");
+                }}
+              >
+                Back to log in
+              </button>
+            ) : (
+              <>
+                {mode === "signup" ? "Already have an account?" : "New here?"}{" "}
+                <button
+                  type="button"
+                  className="font-medium text-foreground underline-offset-4 hover:underline"
+                  onClick={() => {
+                    setMode(mode === "signup" ? "login" : "signup");
+                    setError("");
+                    setNotice("");
+                  }}
+                >
+                  {mode === "signup" ? "Log in" : "Create account"}
+                </button>
+              </>
+            )}
           </p>
         </form>
       </DialogContent>

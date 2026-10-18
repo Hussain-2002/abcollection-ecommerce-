@@ -31,6 +31,7 @@ import { getBundleOffers } from "@/lib/store-offers.server";
 import { makeOrderNumber } from "@/lib/order-id";
 import { formatInr, parsePriceInr } from "@/lib/price";
 import { productImageForColor } from "@/lib/cart-display";
+import { checkoutIdFromCashfreeOrderId, verifyCashfreePayment } from "@/lib/cashfree.server";
 import { deductOrderInventory, getVariant, restoreOrderInventory } from "@/lib/inventory.server";
 import { RELEASE_ORDER_STATUSES } from "@/lib/inventory";
 import { normalizeMobile } from "@/lib/reservation-utils";
@@ -161,6 +162,142 @@ async function findOrderByCheckoutId(
   if (!order) return null;
   const [full] = await attachItems([order]);
   return full ?? { ...order, items: [] };
+}
+
+async function findOrderByPaymentRef(checkoutId: string, gatewayOrderId: string) {
+  const order = await withDb(async () => {
+    const sb = getCommerceDb();
+    if (checkoutId) {
+      const byCheckout = await sb
+        .from("orders")
+        .select("*")
+        .eq("checkout_id", checkoutId)
+        .maybeSingle();
+      if (byCheckout.error) {
+        if (!/checkout_id/i.test(byCheckout.error.message ?? "")) throw byCheckout.error;
+      } else if (byCheckout.data) {
+        return mapOrderRow(byCheckout.data as Record<string, unknown>);
+      }
+    }
+    if (!gatewayOrderId) return null;
+    const byGateway = await sb
+      .from("orders")
+      .select("*")
+      .eq("gateway_order_id", gatewayOrderId)
+      .maybeSingle();
+    if (byGateway.error) {
+      if (/gateway_order_id/i.test(byGateway.error.message ?? "")) return null;
+      throw byGateway.error;
+    }
+    return byGateway.data ? mapOrderRow(byGateway.data as Record<string, unknown>) : null;
+  });
+  if (!order) return null;
+  const [full] = await attachItems([order]);
+  return full ?? { ...order, items: [] };
+}
+
+async function removeOrderedCartLines(customerId: string, items: OrderItem[]) {
+  if (!items.length) return;
+  await withDb(async () => {
+    const sb = getCommerceDb();
+    for (const item of items) {
+      const { error } = await sb
+        .from("cart_items")
+        .delete()
+        .eq("customer_id", customerId)
+        .eq("product_id", item.productId)
+        .eq("size", item.size)
+        .eq("color", item.color);
+      if (error) throw error;
+    }
+  });
+}
+
+async function redeemStoredCoupon(order: Order) {
+  const couponDiscount = order.couponDiscount ?? 0;
+  if (!order.promoCode || couponDiscount <= 0) return;
+  const quote = await quoteCoupon({
+    code: order.promoCode,
+    customerId: order.customerId,
+    lines: order.items.map((item) => ({
+      productId: item.productId,
+      unitPrice: item.unitPrice,
+      quantity: item.quantity,
+    })),
+  }).catch(() => null);
+  if (!quote?.ok || !quote.couponId) return;
+  await recordCouponRedemption({
+    couponId: quote.couponId,
+    orderId: order.id,
+    customerId: order.customerId,
+    code: quote.code,
+    discount: couponDiscount,
+  }).catch((error) => {
+    console.error("[orders] coupon redemption", error);
+  });
+}
+
+/** Mark a checkout order paid and keep the row even if stock deduction fails. */
+async function captureExistingOrder(
+  order: Order,
+  payment: OrderPaymentCapture,
+  input?: CheckoutInput,
+) {
+  if (order.paymentStatus === "paid") return order;
+  let inventoryState: "none" | "deducted" | "restored" = order.inventoryState ?? "none";
+  if (inventoryState !== "deducted") {
+    try {
+      await deductOrderInventory(
+        order.id,
+        order.orderNumber,
+        order.items.map((item) => ({
+          productId: item.productId,
+          color: item.color,
+          size: item.size,
+          quantity: item.quantity,
+          productName: item.productName,
+        })),
+      );
+      inventoryState = "deducted";
+    } catch (error) {
+      console.error("[orders] paid order kept without stock deduction", error);
+    }
+  }
+
+  const now = new Date().toISOString();
+  await withDb(async () => {
+    const sb = getCommerceDb();
+    const patch: Record<string, unknown> = {
+      payment_status: "paid",
+      payment_method: payment.paymentMethod ?? order.paymentMethod ?? "cashfree",
+      payment_id: payment.paymentId ?? order.paymentId,
+      gateway_order_id: payment.gatewayOrderId ?? order.gatewayOrderId,
+      inventory_state: inventoryState,
+      updated_at: now,
+    };
+    let { error } = await sb.from("orders").update(patch).eq("id", order.id);
+    if (error && /payment_id|gateway_order_id/i.test(error.message ?? "")) {
+      delete patch["payment_id"];
+      delete patch["gateway_order_id"];
+      ({ error } = await sb.from("orders").update(patch).eq("id", order.id));
+    }
+    if (error) throw error;
+  });
+
+  const paid: Order = {
+    ...order,
+    paymentStatus: "paid",
+    paymentMethod: payment.paymentMethod ?? order.paymentMethod ?? "cashfree",
+    paymentId: payment.paymentId ?? order.paymentId ?? null,
+    gatewayOrderId: payment.gatewayOrderId ?? order.gatewayOrderId ?? null,
+    inventoryState,
+    updatedAt: now,
+  };
+  await redeemStoredCoupon(paid);
+  if (input?.mode === "cart") await clearCart(order.customerId);
+  else await removeOrderedCartLines(order.customerId, order.items);
+  if (inventoryState === "deducted") invalidateCatalogCache();
+  return paid;
 }
 
 function buildCartLine(
@@ -811,23 +948,73 @@ export async function placeOrder(
   customer: CustomerPublic,
   input: CheckoutInput,
   payment?: OrderPaymentCapture,
-): Promise<Order> {
+): Promise<{ order: Order; justPaid: boolean }> {
   const checkoutId = input.checkoutId?.trim() || "";
+  const requestedPaid = payment?.paymentStatus === "paid";
   if (checkoutId) {
     const existing = await findOrderByCheckoutId(customer.id, checkoutId);
-    if (existing) return existing;
+    if (existing) {
+      if (requestedPaid && existing.paymentStatus !== "paid") {
+        return {
+          order: await captureExistingOrder(existing, payment ?? {}, input),
+          justPaid: true,
+        };
+      }
+      return { order: existing, justPaid: false };
+    }
     const key = `${customer.id}:${checkoutId}`;
     const pending = inflightCheckouts.get(key);
-    if (pending) return pending;
+    if (pending) {
+      const order = await pending;
+      if (requestedPaid && order.paymentStatus !== "paid") {
+        return { order: await captureExistingOrder(order, payment ?? {}, input), justPaid: true };
+      }
+      return { order, justPaid: false };
+    }
     const task = createPlacedOrder(customer, input, checkoutId, payment);
     inflightCheckouts.set(key, task);
     try {
-      return await task;
+      const order = await task;
+      if (requestedPaid && order.paymentStatus !== "paid") {
+        return { order: await captureExistingOrder(order, payment ?? {}, input), justPaid: true };
+      }
+      return { order, justPaid: requestedPaid && order.paymentStatus === "paid" };
     } finally {
       inflightCheckouts.delete(key);
     }
   }
-  return createPlacedOrder(customer, input, "", payment);
+  const order = await createPlacedOrder(customer, input, "", payment);
+  return { order, justPaid: requestedPaid && order.paymentStatus === "paid" };
+}
+
+/** Record a Cashfree payment against the order that was opened when checkout started. */
+export async function confirmCashfreeCheckout(cashfreeOrderId: string) {
+  const checkoutId = checkoutIdFromCashfreeOrderId(cashfreeOrderId);
+  const existing = await findOrderByPaymentRef(checkoutId, cashfreeOrderId);
+  if (!existing) {
+    throw Object.assign(new Error("Paid checkout was not found."), { status: 404 });
+  }
+  if (existing.paymentStatus === "paid") return { order: existing, justPaid: false };
+  const paid = await verifyCashfreePayment(cashfreeOrderId, existing.totalAmount);
+  const order = await captureExistingOrder(existing, {
+    paymentStatus: "paid",
+    paymentMethod: "cashfree",
+    paymentId: paid.paymentId,
+    gatewayOrderId: paid.cashfreeOrderId,
+  });
+  return { order, justPaid: true };
+}
+
+export async function rememberGatewayOrder(orderId: string, gatewayOrderId: string) {
+  await withDb(async () => {
+    const sb = getCommerceDb();
+    const { error } = await sb
+      .from("orders")
+      .update({ gateway_order_id: gatewayOrderId, updated_at: new Date().toISOString() })
+      .eq("id", orderId);
+    if (error && /gateway_order_id/i.test(error.message ?? "")) return;
+    if (error) throw error;
+  });
 }
 
 async function resolveCheckoutLinesAndTotals(customer: CustomerPublic, input: CheckoutInput) {
@@ -1058,18 +1245,21 @@ async function createPlacedOrder(
     };
   });
 
-  await deductOrderInventory(
-    orderId,
-    orderNumber,
-    lines.map((line) => ({
-      productId: line.productId,
-      color: line.color,
-      size: line.size,
-      quantity: line.quantity,
-      productName: line.productName,
-    })),
-  );
-  orderBase.inventoryState = "deducted";
+  const paidNow = payment?.paymentStatus === "paid";
+  if (paidNow) {
+    await deductOrderInventory(
+      orderId,
+      orderNumber,
+      lines.map((line) => ({
+        productId: line.productId,
+        color: line.color,
+        size: line.size,
+        quantity: line.quantity,
+        productName: line.productName,
+      })),
+    );
+    orderBase.inventoryState = "deducted";
+  }
 
   try {
     await withDb(async () => {
@@ -1135,17 +1325,19 @@ async function createPlacedOrder(
       if (itemsError) throw itemsError;
     });
   } catch (error) {
-    await restoreOrderInventory(
-      orderId,
-      orderNumber,
-      lines.map((line) => ({
-        productId: line.productId,
-        color: line.color,
-        size: line.size,
-        quantity: line.quantity,
-      })),
-      "ORDER_RELEASED",
-    );
+    if (paidNow) {
+      await restoreOrderInventory(
+        orderId,
+        orderNumber,
+        lines.map((line) => ({
+          productId: line.productId,
+          color: line.color,
+          size: line.size,
+          quantity: line.quantity,
+        })),
+        "ORDER_RELEASED",
+      );
+    }
     await withDb(async () => {
       const sb = getCommerceDb();
       await sb.from("order_items").delete().eq("order_id", orderId);
@@ -1158,17 +1350,19 @@ async function createPlacedOrder(
     throw error;
   }
 
-  invalidateCatalogCache();
-  if (couponQuote.ok && couponQuote.couponId && couponDiscount > 0) {
-    await recordCouponRedemption({
-      couponId: couponQuote.couponId,
-      orderId,
-      customerId: customer.id,
-      code: couponQuote.code,
-      discount: couponDiscount,
-    });
+  if (paidNow) {
+    invalidateCatalogCache();
+    if (couponQuote.ok && couponQuote.couponId && couponDiscount > 0) {
+      await recordCouponRedemption({
+        couponId: couponQuote.couponId,
+        orderId,
+        customerId: customer.id,
+        code: couponQuote.code,
+        discount: couponDiscount,
+      });
+    }
+    if (input.mode === "cart") await clearCart(customer.id);
   }
-  if (input.mode === "cart") await clearCart(customer.id);
 
   return { ...orderBase, items };
 }

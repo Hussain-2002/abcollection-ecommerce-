@@ -27,30 +27,49 @@ function ReturnInner() {
       try {
         const raw = sessionStorage.getItem(CHECKOUT_DRAFT_KEY);
         const draft = raw ? (JSON.parse(raw) as CheckoutInput) : null;
-        if (!draft || !cashfreeOrderId) {
+        if (!cashfreeOrderId) {
           setError("We could not find this checkout. Return to checkout and try again.");
           return;
         }
-        const res = await fetch("/api/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...draft, cashfreeOrderId }),
-        });
-        const data = await readJsonBody<{ order?: Order; error?: string }>(res);
-        if (!res.ok || !data.order) {
-          setError(
-            apiErrorMessage(data, "Payment could not be confirmed. Your cart is unchanged."),
-          );
-          return;
+
+        let orderNumber = "";
+        let placedOrder: Order | null = null;
+        if (draft) {
+          const res = await fetch("/api/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...draft, cashfreeOrderId }),
+          });
+          const data = await readJsonBody<{ order?: Order; error?: string }>(res);
+          if (res.ok && data.order) placedOrder = data.order;
         }
+
+        if (!placedOrder) {
+          const res = await fetch("/api/payments/confirm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cashfreeOrderId }),
+          });
+          const data = await readJsonBody<{ orderNumber?: string; error?: string }>(res);
+          if (!res.ok || !data.orderNumber) {
+            setError(
+              apiErrorMessage(data, "Payment could not be confirmed. Your cart is unchanged."),
+            );
+            return;
+          }
+          orderNumber = data.orderNumber;
+        } else {
+          orderNumber = placedOrder.orderNumber;
+        }
+
         sessionStorage.removeItem(CHECKOUT_DRAFT_KEY);
         sessionStorage.removeItem(BUY_NOW_KEY);
-        setConfirmed({ orderNumber: data.order.orderNumber, paid: true });
-        fbqTrackPurchase(data.order);
-        router.replace(
-          `/checkout/success?order=${encodeURIComponent(data.order.orderNumber)}&paid=1`,
-        );
-        void applySuccessfulOrder(data.order, draft.mode === "buy_now" ? "buy_now" : "cart");
+        setConfirmed({ orderNumber, paid: true });
+        if (placedOrder) fbqTrackPurchase(placedOrder);
+        router.replace(`/checkout/success?order=${encodeURIComponent(orderNumber)}&paid=1`);
+        if (placedOrder) {
+          void applySuccessfulOrder(placedOrder, draft?.mode === "buy_now" ? "buy_now" : "cart");
+        }
       } catch {
         setError("Something went wrong while confirming payment. Please try again.");
       }

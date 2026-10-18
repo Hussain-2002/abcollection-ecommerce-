@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHmac, timingSafeEqual } from "crypto";
+
 import { CANONICAL_SITE_ORIGIN } from "@/lib/canonical-url";
 import { SITE_URL } from "@/lib/site";
 
@@ -63,11 +65,32 @@ function httpsOrigin(value: string) {
   }
 }
 
-function cashfreeReturnUrl() {
+export function storefrontOrigin(value: string) {
+  const origin = httpsOrigin(value);
+  if (!origin) return "";
+  try {
+    const host = new URL(origin).hostname.toLowerCase();
+    if (host === "abcollection.co.in" || host === "www.abcollection.co.in") return origin;
+  } catch {
+    return "";
+  }
+  return "";
+}
+
+export function requestStorefrontOrigin(request: Request) {
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() || "";
+  const host = forwardedHost || request.headers.get("host")?.trim() || "";
+  const proto =
+    (request.headers.get("x-forwarded-proto") || "https").split(",")[0]?.trim() || "https";
+  return storefrontOrigin(`${proto}://${host}`) || CANONICAL_SITE_ORIGIN;
+}
+
+function cashfreeReturnUrl(origin?: string) {
   const override = httpsOrigin(process.env["CASHFREE_RETURN_URL"] || "");
-  const site = httpsOrigin(SITE_URL);
-  const origin = override || site || CANONICAL_SITE_ORIGIN;
-  return `${origin}/checkout/return?order_id={order_id}`;
+  const site =
+    storefrontOrigin(origin || "") || storefrontOrigin(SITE_URL) || CANONICAL_SITE_ORIGIN;
+  const base = override || site;
+  return `${base}/checkout/return?order_id={order_id}`;
 }
 
 export function cashfreeOrderIdFromCheckoutId(checkoutId: string) {
@@ -122,9 +145,14 @@ export async function createCashfreeOrder(input: {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
+  returnOrigin?: string;
 }) {
   const orderId = cashfreeOrderIdFromCheckoutId(input.checkoutId);
-  const returnUrl = cashfreeReturnUrl();
+  const returnUrl = cashfreeReturnUrl(input.returnOrigin);
+  const notifyOrigin =
+    storefrontOrigin(input.returnOrigin || "") ||
+    storefrontOrigin(SITE_URL) ||
+    CANONICAL_SITE_ORIGIN;
   try {
     return await cashfreeFetch<CashfreeOrder>("/orders", {
       method: "POST",
@@ -140,6 +168,7 @@ export async function createCashfreeOrder(input: {
         },
         order_meta: {
           return_url: returnUrl,
+          notify_url: `${notifyOrigin}/api/payments/cashfree`,
         },
         order_note: "AB Collection",
       }),
@@ -161,8 +190,27 @@ export async function getCashfreePayments(orderId: string) {
   return cashfreeFetch<CashfreePayment[]>(`/orders/${encodeURIComponent(orderId)}/payments`);
 }
 
+export function verifyCashfreeWebhook(rawBody: string, signature: string, timestamp: string) {
+  const { secretKey } = getCashfreeConfig();
+  if (!secretKey || !signature || !timestamp) return false;
+  const expected = createHmac("sha256", secretKey)
+    .update(`${timestamp}${rawBody}`)
+    .digest("base64");
+  const actual = Buffer.from(signature);
+  const wanted = Buffer.from(expected);
+  if (actual.length !== wanted.length) return false;
+  return timingSafeEqual(actual, wanted);
+}
+
 export async function verifyCashfreePayment(orderId: string, expectedAmount: number) {
-  const order = await getCashfreeOrder(orderId);
+  let order = await getCashfreeOrder(orderId);
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const status = String(order.order_status || "").toUpperCase();
+    if (status === "PAID") break;
+    if (status && status !== "ACTIVE") break;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    order = await getCashfreeOrder(orderId);
+  }
   const status = String(order.order_status || "").toUpperCase();
   if (status !== "PAID") {
     throw Object.assign(

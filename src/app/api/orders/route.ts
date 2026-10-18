@@ -1,7 +1,12 @@
 import { after, NextResponse } from "next/server";
 
 import { getCashfreeConfig, verifyCashfreePayment } from "@/lib/cashfree.server";
-import { listOrdersForCustomer, placeOrder, quoteCheckout } from "@/lib/commerce.server";
+import {
+  confirmCashfreeCheckout,
+  listOrdersForCustomer,
+  placeOrder,
+  quoteCheckout,
+} from "@/lib/commerce.server";
 import { checkoutSchema } from "@/lib/commerce-types";
 import { getCustomerSession } from "@/lib/customer-auth.server";
 import { actionErrorMessage } from "@/lib/form-request";
@@ -41,27 +46,47 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
+      try {
+        const confirmed = await confirmCashfreeCheckout(body.cashfreeOrderId);
+        if (confirmed.order.customerId !== session.id) {
+          return NextResponse.json({ error: "Could not place order." }, { status: 403 });
+        }
+        if (confirmed.justPaid) {
+          after(() => {
+            void notifyOrderEvent(confirmed.order, "order_placed");
+            void notifyOrderEvent(confirmed.order, "payment_confirmed");
+          });
+        }
+        return NextResponse.json({ order: confirmed.order });
+      } catch (error) {
+        const status = (error as { status?: number }).status;
+        if (status !== 404) throw error;
+      }
       const paid = await verifyCashfreePayment(body.cashfreeOrderId, quote.totalAmount);
-      const order = await placeOrder(session, body, {
+      const { order, justPaid } = await placeOrder(session, body, {
         paymentStatus: "paid",
         paymentMethod: "cashfree",
         paymentId: paid.paymentId,
         gatewayOrderId: paid.cashfreeOrderId,
       });
-      after(() => {
-        void notifyOrderEvent(order, "order_placed");
-        if (order.paymentStatus === "paid") void notifyOrderEvent(order, "payment_confirmed");
-      });
+      if (justPaid) {
+        after(() => {
+          void notifyOrderEvent(order, "order_placed");
+          void notifyOrderEvent(order, "payment_confirmed");
+        });
+      }
       return NextResponse.json({ order });
     }
 
-    const order = await placeOrder(session, body, {
+    const { order, justPaid } = await placeOrder(session, body, {
       paymentStatus: "paid",
       paymentMethod: "prepaid",
     });
-    after(() => {
-      void notifyOrderEvent(order, "order_placed");
-    });
+    if (justPaid) {
+      after(() => {
+        void notifyOrderEvent(order, "order_placed");
+      });
+    }
     return NextResponse.json({ order });
   } catch (error) {
     const { status, message } = actionErrorMessage(error, "Could not place order.");
