@@ -104,7 +104,7 @@ async function markResult(
 }
 
 export async function sendCustomerEmail(to: string, subject: string, text: string, html: string) {
-  return sendEmail(to, subject, text, html);
+  return sendEmail(to, subject, text, html, SITE_EMAIL);
 }
 
 async function sendEmail(
