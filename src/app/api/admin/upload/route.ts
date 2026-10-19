@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 
 import { requireAdminSession } from "@/lib/admin-auth.server";
+import { compressStoredImage } from "@/lib/product-image-file.server";
 import { getSupabaseWriteClient } from "@/lib/supabase-catalog.server";
 
 export const dynamic = "force-dynamic";
@@ -81,15 +82,16 @@ export async function POST(request: Request) {
 
     const bytes = new Uint8Array(await file.arrayBuffer());
     const mime = MIME_EXT[file.type] ? file.type : sniffMime(bytes);
-    const ext = MIME_EXT[mime];
-    if (!ext) {
+    if (!MIME_EXT[mime]) {
       return NextResponse.json({ error: "Only JPG, PNG, WEBP or GIF allowed." }, { status: 400 });
     }
 
-    const filename = `products/${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
+    const stored = await compressStoredImage(bytes, mime);
+    const filename = `products/${Date.now()}-${randomUUID().slice(0, 8)}.${stored.ext}`;
     const sb = await storageClient();
-    const uploaded = await sb.storage.from(BUCKET).upload(filename, bytes, {
-      contentType: mime,
+    const uploaded = await sb.storage.from(BUCKET).upload(filename, stored.bytes, {
+      contentType: stored.mime,
+      cacheControl: "31536000",
       upsert: false,
     });
     if (uploaded.error) {
