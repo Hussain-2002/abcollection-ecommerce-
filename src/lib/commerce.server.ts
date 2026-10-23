@@ -943,6 +943,112 @@ export async function removeWishlistItem(customerId: string, productId: string) 
   return getWishlist(customerId);
 }
 
+function checkoutLineSignature(
+  lines: { productId: string; color: string; size: string; quantity: number; unitPrice: number }[],
+) {
+  return [...lines]
+    .map((line) =>
+      [line.productId, line.color, line.size, String(line.quantity), String(line.unitPrice)].join(
+        "|",
+      ),
+    )
+    .sort()
+    .join("\n");
+}
+
+/** Drop an unpaid checkout so a changed cart can start a new Cashfree payment. */
+export async function abandonUnpaidCheckout(orderId: string) {
+  return withDb(async () => {
+    const sb = getCommerceDb();
+    const patch: Record<string, unknown> = {
+      checkout_id: randomUUID(),
+      order_status: "cancelled",
+      payment_status: "failed",
+      updated_at: new Date().toISOString(),
+    };
+    let result = await sb
+      .from("orders")
+      .update(patch)
+      .eq("id", orderId)
+      .eq("payment_status", "pending")
+      .select("id");
+    if (result.error && /checkout_id/i.test(result.error.message ?? "")) {
+      delete patch["checkout_id"];
+      result = await sb
+        .from("orders")
+        .update(patch)
+        .eq("id", orderId)
+        .eq("payment_status", "pending")
+        .select("id");
+    }
+    if (result.error) throw result.error;
+    return (result.data ?? []).length > 0;
+  });
+}
+
+async function syncPendingOrderAddress(order: Order, customerId: string, input: CheckoutInput) {
+  let next = {
+    line1: order.addressLine1,
+    line2: order.addressLine2 ?? "",
+    city: order.addressCity,
+    state: order.addressState,
+    pincode: order.addressPincode,
+  };
+  if (input.addressId) {
+    const addresses = await listAddresses(customerId);
+    const address = addresses.find((row) => row.id === input.addressId);
+    if (!address) throw Object.assign(new Error("Selected address not found."), { status: 400 });
+    next = {
+      line1: address.line1,
+      line2: address.line2 ?? "",
+      city: address.city,
+      state: address.state,
+      pincode: address.pincode,
+    };
+  } else if (input.address) {
+    next = {
+      line1: input.address.line1,
+      line2: input.address.line2 ?? "",
+      city: input.address.city,
+      state: input.address.state,
+      pincode: input.address.pincode,
+    };
+  }
+  if (
+    next.line1 === order.addressLine1 &&
+    next.line2 === (order.addressLine2 ?? "") &&
+    next.city === order.addressCity &&
+    next.state === order.addressState &&
+    next.pincode === order.addressPincode
+  ) {
+    return order;
+  }
+  await withDb(async () => {
+    const sb = getCommerceDb();
+    const { error } = await sb
+      .from("orders")
+      .update({
+        address_line1: next.line1,
+        address_line2: next.line2 || null,
+        address_city: next.city,
+        address_state: next.state,
+        address_pincode: next.pincode,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", order.id)
+      .eq("payment_status", "pending");
+    if (error) throw error;
+  });
+  return {
+    ...order,
+    addressLine1: next.line1,
+    addressLine2: next.line2 || null,
+    addressCity: next.city,
+    addressState: next.state,
+    addressPincode: next.pincode,
+  };
+}
+
 export type OrderPaymentCapture = {
   paymentStatus?: "paid" | "pending";
   paymentMethod?: string;
@@ -959,14 +1065,34 @@ export async function placeOrder(
   const requestedPaid = payment?.paymentStatus === "paid";
   if (checkoutId) {
     const existing = await findOrderByCheckoutId(customer.id, checkoutId);
-    if (existing) {
-      if (requestedPaid && existing.paymentStatus !== "paid") {
-        return {
-          order: await captureExistingOrder(existing, payment ?? {}, input),
-          justPaid: true,
-        };
+    if (existing && existing.paymentStatus !== "failed" && existing.orderStatus !== "cancelled") {
+      if (existing.paymentStatus === "paid") return { order: existing, justPaid: false };
+      const quote = await resolveCheckoutLinesAndTotals(customer, input);
+      const sameCart =
+        existing.totalAmount === quote.totalAmount &&
+        checkoutLineSignature(existing.items) === checkoutLineSignature(quote.lines);
+      if (!sameCart) {
+        if (existing.inventoryState === "deducted") {
+          throw Object.assign(
+            new Error("This checkout can no longer be changed. Refresh and try again."),
+            { status: 409 },
+          );
+        }
+        const abandoned = await abandonUnpaidCheckout(existing.id);
+        if (!abandoned) {
+          const latest = await findOrderByCheckoutId(customer.id, checkoutId);
+          if (latest) return { order: latest, justPaid: false };
+        }
+      } else {
+        const current = await syncPendingOrderAddress(existing, customer.id, input);
+        if (requestedPaid) {
+          return {
+            order: await captureExistingOrder(current, payment ?? {}, input),
+            justPaid: true,
+          };
+        }
+        return { order: current, justPaid: false };
       }
-      return { order: existing, justPaid: false };
     }
     const key = `${customer.id}:${checkoutId}`;
     const pending = inflightCheckouts.get(key);
@@ -1135,7 +1261,13 @@ async function resolveCheckoutLinesAndTotals(customer: CustomerPublic, input: Ch
 
 export async function quoteCheckout(customer: CustomerPublic, input: CheckoutInput) {
   const quote = await resolveCheckoutLinesAndTotals(customer, input);
-  return { totalAmount: quote.totalAmount };
+  return {
+    totalAmount: quote.totalAmount,
+    subtotal: quote.subtotal,
+    couponDiscount: quote.couponDiscount,
+    bundleDiscount: quote.bundleDiscount,
+    discount: quote.discount,
+  };
 }
 
 async function createPlacedOrder(
@@ -1488,6 +1620,26 @@ export async function updateOrderStatus(
 ) {
   const existing = await getOrderById(orderId);
   if (!existing) throw Object.assign(new Error("Order not found."), { status: 404 });
+  const fulfilling = new Set([
+    "confirmed",
+    "processing",
+    "packed",
+    "shipped",
+    "out_for_delivery",
+    "delivered",
+  ]);
+  const nextPayment = extras?.paymentStatus?.trim() || existing.paymentStatus;
+  if (
+    fulfilling.has(orderStatus) &&
+    nextPayment !== "paid" &&
+    nextPayment !== "refunded" &&
+    existing.totalAmount > 0
+  ) {
+    throw Object.assign(
+      new Error("This order is not paid yet. Wait for payment before fulfilling it."),
+      { status: 409 },
+    );
+  }
   const now = new Date().toISOString();
   const nextStatus = normalizeOrderStatus(orderStatus, existing.orderStatus);
   const paymentStatus = normalizePaymentStatus(

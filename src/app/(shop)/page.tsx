@@ -11,9 +11,9 @@ import { JsonLd, breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 export const revalidate = 60;
 
 export const metadata = buildPageMetadata({
-  title: "Premium Everyday Essentials, Launching Soon",
+  title: "Premium Everyday Essentials",
   description:
-    "Register your interest in AB Collection's first drop of 240–300 GSM premium cotton tees and reserve an exclusive 10% launch discount. No payment today.",
+    "Shop AB Collection's heavyweight 240–300 GSM cotton tees. Choose an in-stock size, pay by UPI, card, or netbanking, and shipping is free.",
   path: "/",
   image: catalogImageUrl("hero-beige.png"),
 });

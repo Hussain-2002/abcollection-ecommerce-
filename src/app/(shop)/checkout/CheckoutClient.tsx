@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  bestQualifyingBundle,
   buildDisplayCartLines,
   displayLineFromInput,
   formatCartIssue,
@@ -29,6 +30,7 @@ import { cdnImageUrl } from "@/lib/media";
 import { formatInr } from "@/lib/price";
 import { META_CURRENCY, fbqTrack, fbqTrackPurchase } from "@/lib/meta-pixel";
 import { istefadaUnitOff, resolveIstefadaDiscount } from "@/lib/istefada-offer";
+import type { BundleOfferView } from "@/lib/store-offers";
 import { apiErrorMessage, readJsonBody } from "@/lib/form-request";
 
 const ADDRESS_FIELDS = ["label", "line1", "city", "state", "pincode"] as const;
@@ -107,6 +109,12 @@ export default function CheckoutClient() {
     error?: string;
   } | null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
+  const [bundles, setBundles] = useState<BundleOfferView[]>([]);
+  const [serverQuote, setServerQuote] = useState<{
+    totalAmount: number;
+    couponDiscount: number;
+    bundleDiscount: number;
+  } | null>(null);
   const checkoutIdRef = useRef(
     typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : "",
   );
@@ -149,6 +157,13 @@ export default function CheckoutClient() {
   }, [customer]);
 
   const payRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    void fetch("/api/bundles")
+      .then((res) => res.json())
+      .then((data: { bundles?: BundleOfferView[] }) => setBundles(data.bundles ?? []))
+      .catch(() => setBundles([]));
+  }, []);
   const lines = useMemo(() => {
     if (mode === "buy_now" && buyNow) {
       return [displayLineFromInput(buyNow, products)];
@@ -165,7 +180,52 @@ export default function CheckoutClient() {
   const istefadaDiscount = hasOffer ? resolveIstefadaDiscount(promoCode, lines) : 0;
   const previewDiscount = couponQuote?.ok ? couponQuote.discount : istefadaDiscount;
   const previewCode = couponQuote?.ok ? couponQuote.code : hasOffer ? promoCode : "";
-  const total = Math.max(0, subtotal - previewDiscount);
+  const appliedBundle = bestQualifyingBundle(bundles, lines);
+  const bundleSavings = serverQuote?.bundleDiscount ?? appliedBundle?.savings ?? 0;
+  const couponSavings = serverQuote?.couponDiscount ?? previewDiscount;
+  const total = serverQuote?.totalAmount ?? Math.max(0, subtotal - previewDiscount - (appliedBundle?.savings ?? 0));
+
+  useEffect(() => {
+    if (!customer || lines.length === 0) {
+      setServerQuote(null);
+      return;
+    }
+    setServerQuote(null);
+    const promo = couponQuote?.ok
+      ? couponQuote.code
+      : couponInput.trim() || (hasOffer ? promoCode : "");
+    const controller = new AbortController();
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void fetch("/api/checkout/quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          mode,
+          ...(mode === "buy_now" && buyNow ? { buyNow } : {}),
+          ...(promo ? { promoCode: promo } : {}),
+        }),
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then(
+          (data: { totalAmount?: number; couponDiscount?: number; bundleDiscount?: number } | null) => {
+            if (cancelled || !data || typeof data.totalAmount !== "number") return;
+            setServerQuote({
+              totalAmount: data.totalAmount,
+              couponDiscount: data.couponDiscount ?? 0,
+              bundleDiscount: data.bundleDiscount ?? 0,
+            });
+          },
+        )
+        .catch(() => undefined);
+    }, 250);
+    return () => {
+      cancelled = true;
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [buyNow, couponInput, couponQuote, customer, hasOffer, lines, mode, promoCode]);
   const initiateTracked = useRef(false);
 
   useEffect(() => {
@@ -314,12 +374,20 @@ export default function CheckoutClient() {
         alreadyPaid?: boolean;
         paymentSessionId?: string;
         cashfreeOrderId?: string;
+        checkoutId?: string;
         mode?: "sandbox" | "production";
         error?: string;
       }>(payRes);
       if (!payRes.ok) {
         setError(apiErrorMessage(payData, "Could not start payment. Your cart is unchanged."));
         return;
+      }
+      if (payData.checkoutId) {
+        checkoutIdRef.current = payData.checkoutId;
+        sessionStorage.setItem(
+          CHECKOUT_DRAFT_KEY,
+          JSON.stringify({ ...payload, checkoutId: payData.checkoutId }),
+        );
       }
 
       const place = async (cashfreeOrderId?: string) => {
@@ -661,7 +729,7 @@ export default function CheckoutClient() {
                     {line.color} · {line.size} · Qty {line.quantity}
                   </p>
                   <p className="mt-1 font-semibold text-teal">
-                    {hasOffer ? (
+                    {hasOffer && !couponQuote?.ok ? (
                       <span className="flex flex-col">
                         <span className="text-xs font-normal text-muted-foreground line-through">
                           {formatInr(line.lineTotal)}
@@ -714,10 +782,16 @@ export default function CheckoutClient() {
               <span className="text-muted-foreground">Shipping</span>
               <span>Free</span>
             </div>
-            {previewDiscount > 0 ? (
+            {couponSavings > 0 ? (
               <div className="flex justify-between text-teal">
                 <span>{previewCode || "Discount"}</span>
-                <span>-{formatInr(previewDiscount)}</span>
+                <span>-{formatInr(couponSavings)}</span>
+              </div>
+            ) : null}
+            {bundleSavings > 0 ? (
+              <div className="flex justify-between text-teal">
+                <span>{appliedBundle?.title || "Bundle"}</span>
+                <span>-{formatInr(bundleSavings)}</span>
               </div>
             ) : null}
             <div className="flex justify-between text-base font-bold">
@@ -765,7 +839,7 @@ export default function CheckoutClient() {
                 {paying ? "Waiting for payment..." : "Confirming payment..."}
               </>
             ) : (
-              `Pay ${formatInr(total)}`
+              total > 0 ? `Pay ${formatInr(total)}` : "Place order"
             )}
           </Button>
           <p className="mt-3 text-center text-xs text-muted-foreground">
@@ -789,7 +863,9 @@ export default function CheckoutClient() {
               ? paying
                 ? "Waiting for payment..."
                 : "Confirming payment..."
-              : `Pay ${formatInr(total)}`}
+              : total > 0
+                ? `Pay ${formatInr(total)}`
+                : "Place order"}
           </Button>
         </div>
       </form>

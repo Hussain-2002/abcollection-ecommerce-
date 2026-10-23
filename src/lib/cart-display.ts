@@ -123,6 +123,17 @@ export function qualifyingBundles(
   return bundles.filter((bundle) => cartCoversBundleItems(bundle.items, lines));
 }
 
+/** The single bundle checkout will apply: the matching offer with the largest saving. */
+export function bestQualifyingBundle(
+  bundles: BundleOfferView[],
+  lines: { productId: string; color?: string; quantity?: number }[],
+) {
+  return qualifyingBundles(bundles, lines).reduce<BundleOfferView | null>((best, bundle) => {
+    if (!best || bundle.savings > best.savings) return bundle;
+    return best;
+  }, null);
+}
+
 export function validateDisplayCartLines(
   lines: DisplayCartLine[],
   products: Product[],

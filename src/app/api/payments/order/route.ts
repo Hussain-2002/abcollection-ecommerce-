@@ -1,3 +1,5 @@
+import { randomUUID } from "crypto";
+
 import { NextResponse } from "next/server";
 
 import {
@@ -5,7 +7,12 @@ import {
   getCashfreeConfig,
   requestStorefrontOrigin,
 } from "@/lib/cashfree.server";
-import { placeOrder, quoteCheckout, rememberGatewayOrder } from "@/lib/commerce.server";
+import {
+  abandonUnpaidCheckout,
+  placeOrder,
+  quoteCheckout,
+  rememberGatewayOrder,
+} from "@/lib/commerce.server";
 import { checkoutSchema } from "@/lib/commerce-types";
 import { getCustomerSession } from "@/lib/customer-auth.server";
 import { actionErrorMessage } from "@/lib/form-request";
@@ -28,15 +35,19 @@ export async function POST(request: Request) {
 
     const quote = await quoteCheckout(session, body);
     if (quote.totalAmount <= 0) {
-      return NextResponse.json({ skipPayment: true, amount: 0 });
+      return NextResponse.json({ skipPayment: true, amount: 0, checkoutId });
     }
+
+    const reserve = (id: string) =>
+      placeOrder(session, { ...body, checkoutId: id }, {
+        paymentStatus: "pending",
+        paymentMethod: "cashfree",
+      });
 
     // Save the order before Cashfree takes payment, so a successful payment
     // still shows in the admin orders tab if the browser never returns.
-    const reserved = await placeOrder(session, body, {
-      paymentStatus: "pending",
-      paymentMethod: "cashfree",
-    });
+    let activeCheckoutId = checkoutId;
+    let reserved = await reserve(activeCheckoutId);
 
     const config = getCashfreeConfig();
     if (!config.configured) {
@@ -57,15 +68,35 @@ export async function POST(request: Request) {
       );
     }
 
-    const cashfree = await createCashfreeOrder({
-      checkoutId,
-      amount: quote.totalAmount,
-      customerId: session.id,
-      customerName: session.fullName,
-      customerEmail: session.email,
-      customerPhone: phone,
-      returnOrigin: requestStorefrontOrigin(request),
-    });
+    const openCashfree = (id: string) =>
+      createCashfreeOrder({
+        checkoutId: id,
+        amount: quote.totalAmount,
+        customerId: session.id,
+        customerName: session.fullName,
+        customerEmail: session.email,
+        customerPhone: phone,
+        returnOrigin: requestStorefrontOrigin(request),
+      });
+
+    let cashfree = await openCashfree(activeCheckoutId);
+    const amountMatches = (order: { order_amount?: number }) => {
+      const charged = Number(order.order_amount);
+      return !Number.isFinite(charged) || Math.round(charged) === Math.round(quote.totalAmount);
+    };
+    // Cashfree keeps the first amount for a checkout id. A changed cart needs a new id.
+    if (!amountMatches(cashfree) && reserved.order.paymentStatus !== "paid") {
+      await abandonUnpaidCheckout(reserved.order.id);
+      activeCheckoutId = randomUUID();
+      reserved = await reserve(activeCheckoutId);
+      cashfree = await openCashfree(activeCheckoutId);
+      if (!amountMatches(cashfree)) {
+        return NextResponse.json(
+          { error: "The payment amount changed. Refresh checkout and try again." },
+          { status: 409 },
+        );
+      }
+    }
     if (cashfree.order_id) {
       await rememberGatewayOrder(reserved.order.id, cashfree.order_id).catch((error) => {
         console.error("[orders] could not store Cashfree order id", error);
@@ -85,6 +116,7 @@ export async function POST(request: Request) {
         amount: quote.totalAmount,
         mode: config.mode,
         cashfreeOrderId: cashfree.order_id,
+        checkoutId: activeCheckoutId,
       });
     }
 
@@ -101,6 +133,7 @@ export async function POST(request: Request) {
       mode: config.mode,
       cashfreeOrderId: cashfree.order_id,
       paymentSessionId: cashfree.payment_session_id,
+      checkoutId: activeCheckoutId,
     });
   } catch (error) {
     const { status, message } = actionErrorMessage(error, "Could not start payment.");

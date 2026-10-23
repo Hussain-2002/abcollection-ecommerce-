@@ -21,7 +21,7 @@ import {
 import {
   buildDisplayCartLines,
   linePricing,
-  qualifyingBundles,
+  bestQualifyingBundle,
   validateDisplayCartLines,
   type DisplayCartLine,
 } from "@/lib/cart-display";
@@ -78,8 +78,9 @@ export function CartDrawer() {
   );
   const subtotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
   const discount = hasOffer ? resolveIstefadaDiscount(promoCode, lines) : 0;
-  const total = Math.max(0, subtotal - discount);
-  const appliedBundles = qualifyingBundles(bundles, lines);
+  const appliedBundle = bestQualifyingBundle(bundles, lines);
+  const bundleSavings = appliedBundle?.savings ?? 0;
+  const total = Math.max(0, subtotal - discount - bundleSavings);
 
   const checkout = () => {
     closeCart();
@@ -129,25 +130,20 @@ export function CartDrawer() {
             </p>
           )}
 
-          {appliedBundles.length ? (
-            <div className="mt-6 space-y-3">
-              {appliedBundles.map((bundle) => (
-                <div
-                  key={bundle.id}
-                  className="rounded-2xl border border-teal/30 bg-accent px-4 py-3"
-                >
-                  <p className="text-xs font-semibold tracking-[0.12em] text-teal uppercase">
-                    Bundle offer applied
+          {appliedBundle ? (
+            <div className="mt-6">
+              <div className="rounded-2xl border border-teal/30 bg-accent px-4 py-3">
+                <p className="text-xs font-semibold tracking-[0.12em] text-teal uppercase">
+                  Bundle offer applied
+                </p>
+                <p className="mt-1 text-sm font-medium">{appliedBundle.title}</p>
+                {appliedBundle.savings > 0 ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Save {appliedBundle.savingsLabel} ({appliedBundle.savingsPercent}%) on this set
+                    at checkout.
                   </p>
-                  <p className="mt-1 text-sm font-medium">{bundle.title}</p>
-                  {bundle.savings > 0 ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Save {bundle.savingsLabel} ({bundle.savingsPercent}%) when you check out this
-                      set.
-                    </p>
-                  ) : null}
-                </div>
-              ))}
+                ) : null}
+              </div>
             </div>
           ) : null}
         </div>
@@ -165,6 +161,12 @@ export function CartDrawer() {
                     Istefada ₹{discountInr} × {cartCount}
                   </span>
                   <span className="font-semibold">-{formatInr(discount)}</span>
+                </div>
+              ) : null}
+              {bundleSavings > 0 ? (
+                <div className="flex justify-between text-teal">
+                  <span>{appliedBundle?.title || "Bundle"}</span>
+                  <span className="font-semibold">-{formatInr(bundleSavings)}</span>
                 </div>
               ) : null}
               <div className="flex justify-between border-t border-border pt-2 text-base">

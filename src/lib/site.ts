@@ -26,37 +26,37 @@ export const NAV_LINKS = [
 
 export const FAQS = [
   {
-    question: "When will the collection launch?",
+    question: "Can I order now?",
     answer:
-      "Very soon. Register your interest to be the first to know — registered customers get 48 hours of early access before the public.",
+      "Yes. Choose a colour and an in-stock size, add it to your cart, and check out. The order is confirmed after payment succeeds.",
   },
   {
-    question: "How does the pre-launch offer work?",
+    question: "How do I pay?",
     answer:
-      "Register before launch and we reserve an exclusive 10% launch discount on your selected pieces. You'll receive your code by WhatsApp and email.",
+      "Checkout is prepaid through Cashfree. You can pay by UPI, card, or netbanking. Cash on delivery is not available.",
   },
   {
-    question: "Am I paying anything today?",
+    question: "When am I charged?",
     answer:
-      "No. This is only an interest registration. Nothing is charged now, and you'll receive purchase instructions when the collection launches.",
+      "Only after you finish payment. Closing the payment window does not charge you, and stock is held only once the payment succeeds.",
   },
   {
-    question: "Can I select multiple products?",
-    answer: "Yes. Select as many pieces as you like — your discount applies across your selection.",
+    question: "Can I order more than one product?",
+    answer:
+      "Yes. Add each piece to your cart. If your cart includes a bundle set, that bundle saving is applied once at checkout.",
   },
   {
-    question: "Will my size be available?",
+    question: "How do I know my size is in stock?",
     answer:
-      "The 240 GSM Oversized Tee and the Regular Fit Tee launch in S to XXL. All other pieces launch in S to XL. Registering early helps us produce the right sizes in the right quantities.",
+      "Each product shows the colours and sizes that can be bought. A size that is out of stock cannot be added to the cart.",
   },
   {
-    question: "Is Cash on Delivery available?",
-    answer:
-      "Payment will be prepaid only at launch. This keeps costs down and pricing honest — savings we pass back to you.",
+    question: "How much is shipping?",
+    answer: "Shipping is free. The delivery window is shown on the product page and again with your order.",
   },
   {
     question: "How will you use my details?",
     answer:
-      "Only to tell you about the launch and fulfil your order. We never sell your data, and you can unsubscribe at any time.",
+      "To create your account, deliver the order, and send order updates. We never sell your data.",
   },
 ] as const;

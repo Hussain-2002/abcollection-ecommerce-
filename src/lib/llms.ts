@@ -28,7 +28,7 @@ export async function buildLlmsTxt(): Promise<string> {
     `# ${SITE_NAME}`,
     "",
     `> ${SITE_TAGLINE}. Premium heavyweight 240–300 GSM cotton t-shirts for men in India.`,
-    `> Pre-launch storefront at ${PRODUCTION_SITE_URL} — register interest for a 10% launch discount.`,
+    `> Shop at ${PRODUCTION_SITE_URL}. Checkout is prepaid, and shipping is free.`,
     "",
     "## About",
     "",

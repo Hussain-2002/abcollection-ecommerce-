@@ -5,7 +5,7 @@ import { JsonLd, breadcrumbJsonLd, buildPageMetadata, faqJsonLd } from "@/lib/se
 export const metadata = buildPageMetadata({
   title: "FAQ",
   description:
-    "Answers about AB Collection's launch timeline, 10% pre-launch discount, sizing, payment, and how we use your details.",
+    "Answers about ordering, payment, stock, shipping, and how AB Collection uses your details.",
   path: "/faq",
 });
 

@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     template: `%s · ${SITE_NAME}`,
   },
   description:
-    "Premium everyday essentials for men. Heavyweight cotton tees with timeless design and honest pricing. Reserve your 10% launch discount.",
+    "Premium everyday essentials for men. Heavyweight cotton tees with timeless design and honest pricing. Shop in-stock sizes and pay securely at checkout.",
   applicationName: SITE_NAME,
   authors: [{ name: "Abbas Badwahwala" }],
   creator: SITE_NAME,
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     "240 GSM tee",
     "French terry oversized",
     "men's essentials India",
-    "prelaunch discount",
+    "buy cotton t-shirts India",
   ],
   icons: {
     icon: [{ url: "/favicon.png", type: "image/png" }],
