@@ -11,6 +11,7 @@ import { checkoutSchema } from "@/lib/commerce-types";
 import { getCustomerSession } from "@/lib/customer-auth.server";
 import { actionErrorMessage } from "@/lib/form-request";
 import { notifyOrderEvent } from "@/lib/notifications.server";
+import { isListedOrder } from "@/lib/order-tracking";
 import { withExpectedDelivery } from "@/lib/order-tracking.server";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,9 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const session = await getCustomerSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const orders = await withExpectedDelivery(await listOrdersForCustomer(session.id));
+  const orders = await withExpectedDelivery(
+    (await listOrdersForCustomer(session.id)).filter(isListedOrder),
+  );
   return NextResponse.json({ orders }, { headers: { "Cache-Control": "no-store, max-age=0" } });
 }
 
