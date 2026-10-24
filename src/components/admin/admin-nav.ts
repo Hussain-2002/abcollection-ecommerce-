@@ -3,7 +3,6 @@ import {
   Award,
   BarChart3,
   Gift,
-  ClipboardList,
   Layers,
   LayoutDashboard,
   Package,
@@ -40,7 +39,6 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       { href: "/admin/products", label: "Products", icon: Package },
       { href: "/admin/inventory", label: "Inventory", icon: Warehouse },
-      { href: "/admin/stock", label: "Stock", icon: ClipboardList },
       { href: "/admin/collections", label: "Collections", icon: Layers },
       { href: "/admin/badges", label: "Badges", icon: Award },
     ],
