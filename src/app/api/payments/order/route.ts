@@ -39,10 +39,14 @@ export async function POST(request: Request) {
     }
 
     const reserve = (id: string) =>
-      placeOrder(session, { ...body, checkoutId: id }, {
-        paymentStatus: "pending",
-        paymentMethod: "cashfree",
-      });
+      placeOrder(
+        session,
+        { ...body, checkoutId: id },
+        {
+          paymentStatus: "pending",
+          paymentMethod: "cashfree",
+        },
+      );
 
     // Save the order before Cashfree takes payment, so a successful payment
     // still shows in the admin orders tab if the browser never returns.

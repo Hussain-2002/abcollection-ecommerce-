@@ -183,7 +183,9 @@ export default function CheckoutClient() {
   const appliedBundle = bestQualifyingBundle(bundles, lines);
   const bundleSavings = serverQuote?.bundleDiscount ?? appliedBundle?.savings ?? 0;
   const couponSavings = serverQuote?.couponDiscount ?? previewDiscount;
-  const total = serverQuote?.totalAmount ?? Math.max(0, subtotal - previewDiscount - (appliedBundle?.savings ?? 0));
+  const total =
+    serverQuote?.totalAmount ??
+    Math.max(0, subtotal - previewDiscount - (appliedBundle?.savings ?? 0));
 
   useEffect(() => {
     if (!customer || lines.length === 0) {
@@ -209,7 +211,9 @@ export default function CheckoutClient() {
       })
         .then((res) => (res.ok ? res.json() : null))
         .then(
-          (data: { totalAmount?: number; couponDiscount?: number; bundleDiscount?: number } | null) => {
+          (
+            data: { totalAmount?: number; couponDiscount?: number; bundleDiscount?: number } | null,
+          ) => {
             if (cancelled || !data || typeof data.totalAmount !== "number") return;
             setServerQuote({
               totalAmount: data.totalAmount,
@@ -838,8 +842,10 @@ export default function CheckoutClient() {
                 <Loader2 className="mr-2 size-4 animate-spin" />
                 {paying ? "Waiting for payment..." : "Confirming payment..."}
               </>
+            ) : total > 0 ? (
+              `Pay ${formatInr(total)}`
             ) : (
-              total > 0 ? `Pay ${formatInr(total)}` : "Place order"
+              "Place order"
             )}
           </Button>
           <p className="mt-3 text-center text-xs text-muted-foreground">

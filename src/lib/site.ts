@@ -52,7 +52,8 @@ export const FAQS = [
   },
   {
     question: "How much is shipping?",
-    answer: "Shipping is free. The delivery window is shown on the product page and again with your order.",
+    answer:
+      "Shipping is free. The delivery window is shown on the product page and again with your order.",
   },
   {
     question: "How will you use my details?",

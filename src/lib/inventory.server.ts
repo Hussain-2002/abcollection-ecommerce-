@@ -432,12 +432,9 @@ export async function setVariantStock(input: {
   return { ...variant, stock: result.stock };
 }
 
-
 export async function listVariantNetDeltas() {
   return withDb(async () => {
-    const { data, error } = await db()
-      .from("inventory_transactions")
-      .select("variant_id, delta");
+    const { data, error } = await db().from("inventory_transactions").select("variant_id, delta");
     if (error) throw new Error(error.message);
     const nets = new Map<string, number>();
     for (const row of data ?? []) {
