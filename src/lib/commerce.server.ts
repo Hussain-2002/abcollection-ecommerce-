@@ -34,6 +34,7 @@ import { productImageForColor } from "@/lib/cart-display";
 import { checkoutIdFromCashfreeOrderId, verifyCashfreePayment } from "@/lib/cashfree.server";
 import { deductOrderInventory, getVariant, restoreOrderInventory } from "@/lib/inventory.server";
 import { RELEASE_ORDER_STATUSES } from "@/lib/inventory";
+import { resolveMemberPrice } from "@/lib/membership";
 import { isListedOrder } from "@/lib/order-tracking";
 import { normalizeMobile } from "@/lib/reservation-utils";
 import { getSupabaseWriteClient } from "@/lib/supabase-catalog.server";
@@ -237,13 +238,44 @@ async function redeemStoredCoupon(order: Order) {
   });
 }
 
-/** Mark a checkout order paid and keep the row even if stock deduction fails. */
+/**
+ * Mark a checkout order paid and keep the row even if stock deduction fails.
+ * The webhook, the return page and the in-page checkout can all confirm the same
+ * payment at once, so only the caller that flips the row to paid deducts stock,
+ * redeems the coupon and reports `justPaid` (which sends the emails).
+ */
 async function captureExistingOrder(
   order: Order,
   payment: OrderPaymentCapture,
   input?: CheckoutInput,
-) {
-  if (order.paymentStatus === "paid") return order;
+): Promise<{ order: Order; justPaid: boolean }> {
+  if (order.paymentStatus === "paid") return { order, justPaid: false };
+  const now = new Date().toISOString();
+  const claimed = await withDb(async () => {
+    const sb = getCommerceDb();
+    const patch: Record<string, unknown> = {
+      payment_status: "paid",
+      payment_method: payment.paymentMethod ?? order.paymentMethod ?? "cashfree",
+      payment_id: payment.paymentId ?? order.paymentId,
+      gateway_order_id: payment.gatewayOrderId ?? order.gatewayOrderId,
+      updated_at: now,
+    };
+    const claim = () =>
+      sb.from("orders").update(patch).eq("id", order.id).neq("payment_status", "paid").select("id");
+    let { data, error } = await claim();
+    if (error && /payment_id|gateway_order_id/i.test(error.message ?? "")) {
+      delete patch["payment_id"];
+      delete patch["gateway_order_id"];
+      ({ data, error } = await claim());
+    }
+    if (error) throw error;
+    return (data ?? []).length > 0;
+  });
+  if (!claimed) {
+    const latest = await getOrderById(order.id);
+    return { order: latest ?? { ...order, paymentStatus: "paid" }, justPaid: false };
+  }
+
   let inventoryState: "none" | "deducted" | "restored" = order.inventoryState ?? "none";
   if (inventoryState !== "deducted") {
     try {
@@ -259,30 +291,17 @@ async function captureExistingOrder(
         })),
       );
       inventoryState = "deducted";
+      await withDb(async () => {
+        const { error } = await getCommerceDb()
+          .from("orders")
+          .update({ inventory_state: inventoryState })
+          .eq("id", order.id);
+        if (error) throw error;
+      });
     } catch (error) {
       console.error("[orders] paid order kept without stock deduction", error);
     }
   }
-
-  const now = new Date().toISOString();
-  await withDb(async () => {
-    const sb = getCommerceDb();
-    const patch: Record<string, unknown> = {
-      payment_status: "paid",
-      payment_method: payment.paymentMethod ?? order.paymentMethod ?? "cashfree",
-      payment_id: payment.paymentId ?? order.paymentId,
-      gateway_order_id: payment.gatewayOrderId ?? order.gatewayOrderId,
-      inventory_state: inventoryState,
-      updated_at: now,
-    };
-    let { error } = await sb.from("orders").update(patch).eq("id", order.id);
-    if (error && /payment_id|gateway_order_id/i.test(error.message ?? "")) {
-      delete patch["payment_id"];
-      delete patch["gateway_order_id"];
-      ({ error } = await sb.from("orders").update(patch).eq("id", order.id));
-    }
-    if (error) throw error;
-  });
 
   const paid: Order = {
     ...order,
@@ -297,7 +316,7 @@ async function captureExistingOrder(
   if (input?.mode === "cart") await clearCart(order.customerId);
   else await removeOrderedCartLines(order.customerId, order.items);
   if (inventoryState === "deducted") invalidateCatalogCache();
-  return paid;
+  return { order: paid, justPaid: true };
 }
 
 function buildCartLine(
@@ -347,6 +366,9 @@ function mapOrderRow(row: Record<string, unknown>, items: OrderItem[] = []): Ord
     promoCode: (val(row, "promo_code", "promoCode") as string | null) ?? null,
     couponDiscount: money(val(row, "coupon_discount", "couponDiscount")),
     bundleDiscount: money(val(row, "bundle_discount", "bundleDiscount")),
+    memberDiscount: money(val(row, "member_discount", "memberDiscount")),
+    customerMembershipId:
+      (val(row, "customer_membership_id", "customerMembershipId") as string | null) ?? null,
     invoiceNumber: (val(row, "invoice_number", "invoiceNumber") as string | null) ?? null,
     paymentMethod: (val(row, "payment_method", "paymentMethod") as string | null) ?? "prepaid",
     paymentId: (val(row, "payment_id", "paymentId") as string | null) ?? null,
@@ -1086,10 +1108,7 @@ export async function placeOrder(
       } else {
         const current = await syncPendingOrderAddress(existing, customer.id, input);
         if (requestedPaid) {
-          return {
-            order: await captureExistingOrder(current, payment ?? {}, input),
-            justPaid: true,
-          };
+          return captureExistingOrder(current, payment ?? {}, input);
         }
         return { order: current, justPaid: false };
       }
@@ -1099,7 +1118,7 @@ export async function placeOrder(
     if (pending) {
       const order = await pending;
       if (requestedPaid && order.paymentStatus !== "paid") {
-        return { order: await captureExistingOrder(order, payment ?? {}, input), justPaid: true };
+        return captureExistingOrder(order, payment ?? {}, input);
       }
       return { order, justPaid: false };
     }
@@ -1108,7 +1127,7 @@ export async function placeOrder(
     try {
       const order = await task;
       if (requestedPaid && order.paymentStatus !== "paid") {
-        return { order: await captureExistingOrder(order, payment ?? {}, input), justPaid: true };
+        return captureExistingOrder(order, payment ?? {}, input);
       }
       return { order, justPaid: requestedPaid && order.paymentStatus === "paid" };
     } finally {
@@ -1128,13 +1147,12 @@ export async function confirmCashfreeCheckout(cashfreeOrderId: string) {
   }
   if (existing.paymentStatus === "paid") return { order: existing, justPaid: false };
   const paid = await verifyCashfreePayment(cashfreeOrderId, existing.totalAmount);
-  const order = await captureExistingOrder(existing, {
+  return captureExistingOrder(existing, {
     paymentStatus: "paid",
     paymentMethod: "cashfree",
     paymentId: paid.paymentId,
     gatewayOrderId: paid.cashfreeOrderId,
   });
-  return { order, justPaid: true };
 }
 
 export async function rememberGatewayOrder(orderId: string, gatewayOrderId: string) {
@@ -1147,6 +1165,33 @@ export async function rememberGatewayOrder(orderId: string, gatewayOrderId: stri
     if (error && /gateway_order_id/i.test(error.message ?? "")) return;
     if (error) throw error;
   });
+}
+
+/**
+ * AB Insider prices for this checkout, decided server-side. Only registered
+ * customers with a live membership qualify; any lookup failure means no member pricing.
+ */
+async function memberPricingFor(
+  customer: CustomerPublic,
+  resolved: { line: CartLine; variantId: string }[],
+) {
+  if (customer.status !== "active") return null;
+  try {
+    const { getLiveMembership, listMemberRules, getMembershipSettings } =
+      await import("@/lib/membership.server");
+    const membership = await getLiveMembership(customer.id);
+    if (!membership) return null;
+    const [rules, settings] = await Promise.all([listMemberRules(), getMembershipSettings()]);
+    const prices = new Map<CartLine, number>();
+    for (const { line, variantId } of resolved) {
+      const price = resolveMemberPrice(rules, line.productId, variantId, line.unitPrice);
+      if (price !== null) prices.set(line, price);
+    }
+    return { membership, settings, prices };
+  } catch (error) {
+    console.error("[orders] member pricing unavailable", error);
+    return null;
+  }
 }
 
 async function resolveCheckoutLinesAndTotals(customer: CustomerPublic, input: CheckoutInput) {
@@ -1222,31 +1267,64 @@ async function resolveCheckoutLinesAndTotals(customer: CustomerPublic, input: Ch
     );
   }
 
-  const subtotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
-  const shippingCost = SHIPPING_COST_INR;
-  let couponQuote = await quoteCoupon({
-    code: input.promoCode,
-    customerId: customer.id,
-    lines,
+  const member = await memberPricingFor(customer, resolvedVariants);
+  const regularLines = lines;
+  const isMemberLine = (index: number) => Boolean(member?.prices.has(regularLines[index]!));
+  // Member-priced lines carry the member unit price into totals and the order.
+  const pricedLines: CartLine[] = regularLines.map((line) => {
+    const price = member?.prices.get(line);
+    return price === undefined
+      ? line
+      : { ...line, unitPrice: price, lineTotal: price * line.quantity };
   });
-  if (!couponQuote.ok && input.promoCode?.trim().toUpperCase() === ISTEFADA_PROMO_CODE) {
-    const fallback = resolveIstefadaDiscount(input.promoCode, lines);
-    if (fallback > 0) {
-      couponQuote = { ok: true, code: ISTEFADA_PROMO_CODE, discount: fallback };
-    }
+  const memberDiscount = regularLines.reduce(
+    (sum, line, index) => sum + (line.lineTotal - pricedLines[index]!.lineTotal),
+    0,
+  );
+
+  const subtotal = pricedLines.reduce((sum, line) => sum + line.lineTotal, 0);
+  const shippingCost = SHIPPING_COST_INR;
+  const promo = input.promoCode?.trim().toUpperCase() ?? "";
+  const isOffer = promo === ISTEFADA_PROMO_CODE;
+  // Stacking off (the default): coupons, the Istefada offer and bundles only
+  // touch items that are not member priced.
+  const stackPromo = member
+    ? isOffer
+      ? member.settings.stackOffers
+      : member.settings.stackCoupons
+    : true;
+  const promoLines = stackPromo
+    ? pricedLines
+    : pricedLines.filter((_, index) => !isMemberLine(index));
+  let couponQuote: Awaited<ReturnType<typeof quoteCoupon>> =
+    promo && !promoLines.length
+      ? { ok: true, code: "", discount: 0 }
+      : await quoteCoupon({ code: input.promoCode, customerId: customer.id, lines: promoLines });
+  if (!couponQuote.ok && isOffer) {
+    const fallback = resolveIstefadaDiscount(input.promoCode, promoLines);
+    // The offer is applied automatically, so a member cart it can't touch just skips it.
+    couponQuote =
+      fallback > 0 || member
+        ? { ok: true, code: fallback > 0 ? ISTEFADA_PROMO_CODE : "", discount: fallback }
+        : couponQuote;
   }
   if (input.promoCode?.trim() && !couponQuote.ok) {
     throw Object.assign(new Error(couponQuote.error || "This coupon is not valid."), {
       status: 409,
     });
   }
-  const bundleMatch = bestApplicableBundle(await getBundleOffers(), products, lines);
+  const bundleLines =
+    !member || member.settings.stackBundles
+      ? pricedLines
+      : pricedLines.filter((_, index) => !isMemberLine(index));
+  const bundleMatch = bestApplicableBundle(await getBundleOffers(), products, bundleLines);
   const couponDiscount = couponQuote.ok ? couponQuote.discount : 0;
   const bundleDiscount = bundleMatch?.view.savings ?? 0;
   const discount = couponDiscount + bundleDiscount;
   const totalAmount = Math.max(0, subtotal + shippingCost - discount);
   return {
-    lines,
+    lines: pricedLines,
+    regularLines,
     products,
     resolvedVariants,
     couponQuote,
@@ -1256,6 +1334,8 @@ async function resolveCheckoutLinesAndTotals(customer: CustomerPublic, input: Ch
     bundleDiscount,
     discount,
     totalAmount,
+    memberDiscount,
+    membershipId: memberDiscount > 0 ? (member?.membership.id ?? null) : null,
   };
 }
 
@@ -1267,6 +1347,16 @@ export async function quoteCheckout(customer: CustomerPublic, input: CheckoutInp
     couponDiscount: quote.couponDiscount,
     bundleDiscount: quote.bundleDiscount,
     discount: quote.discount,
+    memberDiscount: quote.memberDiscount,
+    /** Unit prices the server will charge, for the checkout summary. */
+    lines: quote.lines.map((line, index) => ({
+      productId: line.productId,
+      color: line.color,
+      size: line.size,
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+      regularUnitPrice: quote.regularLines[index]?.unitPrice ?? line.unitPrice,
+    })),
   };
 }
 
@@ -1287,6 +1377,8 @@ async function createPlacedOrder(
     bundleDiscount,
     discount,
     totalAmount,
+    memberDiscount,
+    membershipId,
   } = await resolveCheckoutLinesAndTotals(customer, input);
 
   let address: CustomerAddress | null = null;
@@ -1344,6 +1436,8 @@ async function createPlacedOrder(
     promoCode: couponQuote.code || null,
     couponDiscount,
     bundleDiscount,
+    memberDiscount,
+    customerMembershipId: membershipId,
     invoiceNumber: null,
     paymentMethod: payment?.paymentMethod ?? "prepaid",
     paymentId: payment?.paymentId ?? null,
@@ -1421,6 +1515,8 @@ async function createPlacedOrder(
         promo_code: orderBase.promoCode,
         coupon_discount: orderBase.couponDiscount,
         bundle_discount: orderBase.bundleDiscount,
+        member_discount: orderBase.memberDiscount ?? 0,
+        customer_membership_id: orderBase.customerMembershipId ?? null,
         payment_method: orderBase.paymentMethod,
         payment_id: orderBase.paymentId,
         gateway_order_id: orderBase.gatewayOrderId,
@@ -1429,6 +1525,12 @@ async function createPlacedOrder(
         updated_at: orderBase.updatedAt,
       };
       let { error: orderError } = await sb.from("orders").insert(orderPayload);
+      // Before the membership migration runs, these columns don't exist yet.
+      if (orderError && /member_discount|customer_membership_id/i.test(orderError.message ?? "")) {
+        delete orderPayload["member_discount"];
+        delete orderPayload["customer_membership_id"];
+        ({ error: orderError } = await sb.from("orders").insert(orderPayload));
+      }
       if (orderError && /checkout_id/i.test(orderError.message ?? "")) {
         delete orderPayload["checkout_id"];
         ({ error: orderError } = await sb.from("orders").insert(orderPayload));

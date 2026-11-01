@@ -9,8 +9,8 @@ export function ProductBundleOffers({ bundles }: { bundles: BundleOfferView[] })
         Bundle offers
       </p>
       {bundles.map((bundle) => (
-        <article key={bundle.id} className="rounded-3xl border border-border bg-sand p-5">
-          <h2 className="font-display text-xl font-bold">{bundle.title}</h2>
+        <article key={bundle.id} className="border border-border bg-paper p-5">
+          <h2 className="font-display text-xl font-normal">{bundle.title}</h2>
           <ul className="mt-4 space-y-2">
             {bundle.items.map((item, index) => (
               <li

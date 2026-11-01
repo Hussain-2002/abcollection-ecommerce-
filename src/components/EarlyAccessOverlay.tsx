@@ -191,7 +191,7 @@ export function EarlyAccessOverlay({ forceOpen = false, onClose, onEmailCaptured
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="mt-6 h-13 w-full rounded-full text-xs tracking-luxe uppercase"
+                  className="mt-6 h-13 w-full text-xs tracking-luxe uppercase"
                 >
                   {loading ? (
                     <>

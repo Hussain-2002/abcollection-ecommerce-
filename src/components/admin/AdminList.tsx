@@ -61,13 +61,13 @@ export function AdminList<T>({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={placeholder}
-              className="h-10 max-w-sm rounded-full bg-white"
+              className="h-10 max-w-sm bg-white"
             />
           )}
           {toolbar}
         </div>
       )}
-      <div className="rounded-2xl border border-border bg-white">
+      <div className="border border-border bg-white">
         <Table>
           <TableHeader>
             <TableRow>

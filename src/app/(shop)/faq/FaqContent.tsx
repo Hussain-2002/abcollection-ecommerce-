@@ -14,7 +14,7 @@ export function FaqContent() {
     <div className="mx-auto grid max-w-7xl gap-12 px-5 py-14 lg:grid-cols-[0.4fr_0.6fr] lg:px-8 lg:py-20">
       <div>
         <p className="eyebrow">Questions</p>
-        <h1 className="mt-4 font-display text-[2.15rem] font-bold tracking-tight sm:text-5xl">
+        <h1 className="mt-4 font-display text-[2.15rem] font-normal tracking-tight sm:text-5xl">
           Everything you might ask
         </h1>
         <p className="mt-6 max-w-sm text-sm leading-relaxed text-muted-foreground">
@@ -26,7 +26,7 @@ export function FaqContent() {
         </p>
         <Button
           asChild
-          className="mt-8 h-12 w-full max-w-xs rounded-full bg-teal px-8 text-xs font-semibold tracking-[0.12em] text-teal-foreground uppercase sm:w-auto sm:max-w-none"
+          className="mt-8 h-12 w-full max-w-xs bg-teal px-8 text-xs font-semibold tracking-[0.12em] text-teal-foreground uppercase sm:w-auto sm:max-w-none"
         >
           <Link href="/collection">Shop Collection</Link>
         </Button>

@@ -9,6 +9,8 @@ export const PUBLIC_STATIC_ROUTES: {
   { path: "/", changeFrequency: "weekly", priority: 1 },
   { path: "/collection", changeFrequency: "weekly", priority: 0.9 },
   { path: "/about", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/journey", changeFrequency: "daily", priority: 0.75 },
+  { path: "/membership", changeFrequency: "weekly", priority: 0.7 },
   { path: "/faq", changeFrequency: "monthly", priority: 0.7 },
   { path: "/contact", changeFrequency: "monthly", priority: 0.6 },
   { path: "/wholesale", changeFrequency: "monthly", priority: 0.65 },

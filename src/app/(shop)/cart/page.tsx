@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { Minus, Plus, Trash2 } from "lucide-react";
 
 import { useCommerce } from "@/components/commerce/CommerceProvider";
+import { useMemberPricing } from "@/components/membership/MembershipProvider";
 import { ColorSwatchRow } from "@/components/site/ColorSwatchRow";
 import { useIstefadaOffer } from "@/components/site/IstefadaOfferProvider";
 import { useCatalog } from "@/components/site/CatalogProvider";
@@ -58,23 +59,21 @@ export default function CartPage() {
     [lines],
   );
   const itemCount = useMemo(() => lines.reduce((n, line) => n + line.quantity, 0), [lines]);
-  const discount = hasOffer ? resolveIstefadaDiscount(promoCode, lines) : 0;
-  const total = Math.max(0, subtotal - discount);
+  // AB Insider prices for display; checkout recalculates everything on the server.
+  const member = useMemberPricing(lines);
+  const discount = hasOffer ? resolveIstefadaDiscount(promoCode, member.offerLines) : 0;
+  const total = Math.max(0, subtotal - member.memberSavings - discount);
   const checkoutRef = useRef<HTMLButtonElement>(null);
   const checkoutInView = useInView(checkoutRef, lines.length > 0);
 
   const checkout = () => {
     if (issues.length) return;
-    if (!customer) {
-      openAuth({ type: "checkout" });
-      return;
-    }
     router.push("/checkout");
   };
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-12 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-8 sm:py-16 lg:pb-16">
-      <h1 className="font-display text-[2.15rem] font-bold tracking-tight sm:text-5xl">
+      <h1 className="font-display text-[2.15rem] font-normal tracking-tight sm:text-5xl">
         Your Cart
       </h1>
       <p className="mt-3 text-sm text-muted-foreground">
@@ -82,13 +81,13 @@ export default function CartPage() {
       </p>
 
       {!lines.length ? (
-        <div className="mt-10 rounded-3xl border border-border bg-sand p-8 text-center">
+        <div className="mt-10 border border-border bg-paper p-8 text-center">
           <p className="text-sm text-muted-foreground">
             Browse the collection and add your favourites.
           </p>
           <Button
             asChild
-            className="mt-6 h-11 rounded-full bg-teal px-8 text-xs tracking-[0.12em] text-teal-foreground uppercase"
+            className="mt-6 h-11 bg-teal px-8 text-xs tracking-[0.12em] text-teal-foreground uppercase"
           >
             <Link href="/collection">Shop Collection</Link>
           </Button>
@@ -96,19 +95,19 @@ export default function CartPage() {
       ) : (
         <div className="mt-10 grid gap-10 lg:grid-cols-[1.4fr_0.8fr]">
           <div className="space-y-4">
-            {lines.map((line) => {
+            {member.lines.map((line) => {
               const stock = availableStock(line.product, line.color, line.size, CART_MAX_QUANTITY);
               const maxQty = quantityCap(stock);
               const issue = issueByKey[line.key];
               return (
                 <article
                   key={line.key}
-                  className="flex gap-4 rounded-3xl border border-border bg-background p-4"
+                  className="flex gap-4 border border-border bg-background p-4"
                 >
                   <img
                     src={cdnImageUrl(line.image)}
                     alt={line.name}
-                    className="size-24 rounded-2xl object-cover object-top sm:size-28"
+                    className="size-24 object-cover object-top sm:size-28"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
@@ -127,7 +126,19 @@ export default function CartPage() {
                         />
                         <p className="mt-1 text-sm text-muted-foreground">Size {line.size}</p>
                         <p className="mt-2 text-sm font-semibold text-teal">
-                          {hasOffer ? (
+                          {line.isMemberPriced ? (
+                            <span className="flex flex-col">
+                              <span className="text-xs font-normal text-muted-foreground line-through">
+                                {formatInr(line.regularUnitPrice)}
+                              </span>
+                              <span className="flex items-center gap-1.5">
+                                {formatInr(line.unitPrice)}
+                                <span className="bg-ink px-1 py-0.5 text-[0.52rem] font-normal tracking-[0.14em] text-white uppercase">
+                                  Insider
+                                </span>
+                              </span>
+                            </span>
+                          ) : hasOffer ? (
                             <span className="flex flex-col">
                               <span className="text-xs font-normal text-muted-foreground line-through">
                                 {formatInr(line.unitPrice)}
@@ -145,17 +156,17 @@ export default function CartPage() {
                         type="button"
                         aria-label="Remove"
                         onClick={() => void removeFromCart(line.key)}
-                        className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        className="p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
                       >
                         <Trash2 className="size-4" />
                       </button>
                     </div>
-                    <div className="mt-4 inline-flex items-center gap-3 rounded-full border border-border px-2 py-1">
+                    <div className="mt-4 inline-flex items-center gap-3 border border-border px-2 py-1">
                       <button
                         type="button"
                         aria-label="Decrease quantity"
                         onClick={() => void updateCartQuantity(line.key, line.quantity - 1)}
-                        className="rounded-full p-1 hover:bg-muted"
+                        className="p-1 hover:bg-muted"
                       >
                         <Minus className="size-3.5" />
                       </button>
@@ -167,7 +178,7 @@ export default function CartPage() {
                         aria-label="Increase quantity"
                         disabled={line.quantity >= maxQty}
                         onClick={() => void updateCartQuantity(line.key, line.quantity + 1)}
-                        className="rounded-full p-1 hover:bg-muted disabled:opacity-40"
+                        className="p-1 hover:bg-muted disabled:opacity-40"
                       >
                         <Plus className="size-3.5" />
                       </button>
@@ -181,8 +192,8 @@ export default function CartPage() {
             })}
           </div>
 
-          <aside className="h-fit rounded-3xl border border-border bg-sand p-6 lg:sticky lg:top-24">
-            <h2 className="font-display text-2xl font-bold">Summary</h2>
+          <aside className="h-fit border border-border bg-paper p-6 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)]">
+            <h2 className="font-display text-2xl font-normal">Summary</h2>
             <div className="mt-5 space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Subtotal</span>
@@ -192,6 +203,12 @@ export default function CartPage() {
                 <span className="text-muted-foreground">Shipping</span>
                 <span className="font-semibold">Free</span>
               </div>
+              {member.memberSavings > 0 ? (
+                <div className="flex justify-between">
+                  <span>AB Insider prices</span>
+                  <span className="font-semibold">-{formatInr(member.memberSavings)}</span>
+                </div>
+              ) : null}
               {discount > 0 ? (
                 <div className="flex justify-between text-teal">
                   <span>
@@ -209,7 +226,7 @@ export default function CartPage() {
               ref={checkoutRef}
               onClick={checkout}
               disabled={issues.length > 0}
-              className="mt-6 h-14 w-full rounded-full bg-teal text-sm font-semibold tracking-[0.08em] text-teal-foreground uppercase"
+              className="mt-6 h-14 w-full bg-teal text-sm font-semibold tracking-[0.08em] text-teal-foreground uppercase"
             >
               Checkout
             </Button>
@@ -243,7 +260,7 @@ export default function CartPage() {
             <Button
               onClick={checkout}
               disabled={issues.length > 0}
-              className="h-12 flex-1 rounded-full bg-teal text-sm font-semibold tracking-[0.08em] text-teal-foreground uppercase"
+              className="h-12 flex-1 bg-teal text-sm font-semibold tracking-[0.08em] text-teal-foreground uppercase"
             >
               Checkout
             </Button>

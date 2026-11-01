@@ -1,7 +1,7 @@
 import Link from "next/link";
 
-import { ProductCard } from "@/components/site/ProductCard";
-import { Reveal } from "@/components/Reveal";
+import { MemberPromo } from "@/components/membership/MemberPromo";
+import { ShopGrid } from "@/components/site/ShopGrid";
 import { getProducts } from "@/lib/catalog.server";
 import { catalogImageUrl } from "@/lib/media";
 import { JsonLd, breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
@@ -28,42 +28,30 @@ export default async function CollectionPage() {
         ])}
       />
 
-      <section className="px-5 pt-14 pb-8 sm:px-8">
-        <div className="mx-auto max-w-7xl text-center">
-          <p className="eyebrow">First drop</p>
-          <h1 className="mt-4 font-display text-[2.15rem] font-bold tracking-tight sm:text-6xl">
-            The Collection
-          </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Six pieces. Nothing extra. Heavyweight cotton essentials made for Indian weather and
-            everyday life. Choose your size and colour, then add to cart.
+      <section className="page-wrap pt-[clamp(1.75rem,4vw,3rem)] pb-6">
+        <nav
+          aria-label="Breadcrumb"
+          className="mb-4 flex gap-2 text-[0.72rem] tracking-[0.14em] text-muted-foreground uppercase"
+        >
+          <Link href="/" className="hover:text-foreground">
+            Home
+          </Link>
+          <span aria-hidden>/</span>
+          <span className="text-foreground">Shop all</span>
+        </nav>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h1 className="text-[clamp(2.2rem,5vw,4rem)] leading-none">Shop all</h1>
+          <p className="max-w-[46ch] text-sm text-muted-foreground">
+            Heavyweight cotton essentials made for Indian weather and everyday life. Free shipping
+            across India.
           </p>
+        </div>
+        <div className="mt-5">
+          <MemberPromo />
         </div>
       </section>
 
-      <section className="px-5 pb-20 sm:px-8 sm:pb-28">
-        <div className="mx-auto grid max-w-7xl gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
-          {products.map((product, index) => (
-            <Reveal key={product.id} delay={index * 50}>
-              <ProductCard product={product} />
-            </Reveal>
-          ))}
-        </div>
-        <p className="mx-auto mt-12 max-w-xl text-center text-sm text-muted-foreground">
-          Looking for something specific?{" "}
-          <Link
-            href="/contact"
-            className="font-medium text-teal underline-offset-4 hover:underline"
-          >
-            Contact us
-          </Link>{" "}
-          or read our{" "}
-          <Link href="/faq" className="font-medium text-teal underline-offset-4 hover:underline">
-            FAQ
-          </Link>
-          .
-        </p>
-      </section>
+      <ShopGrid products={products} />
     </>
   );
 }

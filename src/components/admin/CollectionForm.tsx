@@ -74,7 +74,7 @@ export function CollectionForm({
               value={form.id}
               onChange={(e) => set("id", e.target.value)}
               placeholder="oversized"
-              className="h-11 rounded-xl bg-white"
+              className="h-11 bg-white"
             />
           </div>
           <div className="space-y-2">
@@ -83,7 +83,7 @@ export function CollectionForm({
               required
               value={form.title}
               onChange={(e) => set("title", e.target.value)}
-              className="h-11 rounded-xl bg-white"
+              className="h-11 bg-white"
             />
           </div>
           <div className="space-y-2">
@@ -106,7 +106,7 @@ export function CollectionForm({
               value={form.tint}
               onChange={(e) => set("tint", e.target.value)}
               placeholder="bg-white"
-              className="h-11 rounded-xl bg-white"
+              className="h-11 bg-white"
             />
           </div>
           <div className="space-y-2">
@@ -115,7 +115,7 @@ export function CollectionForm({
               type="number"
               value={form.sortOrder}
               onChange={(e) => set("sortOrder", Number(e.target.value) || 0)}
-              className="h-11 rounded-xl bg-white"
+              className="h-11 bg-white"
             />
           </div>
         </div>
@@ -129,20 +129,11 @@ export function CollectionForm({
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
         <div className="flex gap-3">
-          <Button
-            type="submit"
-            disabled={saving}
-            className="rounded-full bg-teal text-teal-foreground"
-          >
+          <Button type="submit" disabled={saving} className="bg-teal text-teal-foreground">
             {saving ? <Loader2 className="size-4 animate-spin" /> : null}
             {mode === "create" ? "Create collection" : "Save changes"}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full"
-            onClick={() => router.back()}
-          >
+          <Button type="button" variant="outline" className="" onClick={() => router.back()}>
             Cancel
           </Button>
         </div>

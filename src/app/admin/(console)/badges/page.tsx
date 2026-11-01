@@ -94,7 +94,7 @@ export default function AdminBadgesPage() {
         actions={
           <Button
             type="button"
-            className="rounded-full bg-teal text-teal-foreground hover:bg-teal/90"
+            className="bg-teal text-teal-foreground hover:bg-teal/90"
             onClick={() => {
               setForm(emptyBadge());
               setError("");
@@ -129,7 +129,7 @@ export default function AdminBadgesPage() {
                 disabled={editing}
                 value={form.id}
                 onChange={(event) => setForm((prev) => ({ ...prev, id: event.target.value }))}
-                className="h-11 rounded-xl bg-white"
+                className="h-11 bg-white"
               />
             </div>
             <div className="space-y-2">
@@ -139,7 +139,7 @@ export default function AdminBadgesPage() {
                 required
                 value={form.name}
                 onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                className="h-11 rounded-xl bg-white"
+                className="h-11 bg-white"
               />
             </div>
             <div className="space-y-2">
@@ -149,7 +149,7 @@ export default function AdminBadgesPage() {
                 required
                 value={form.label}
                 onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))}
-                className="h-11 rounded-xl bg-white"
+                className="h-11 bg-white"
               />
             </div>
             <div className="space-y-2">
@@ -177,7 +177,7 @@ export default function AdminBadgesPage() {
             </label>
             {error ? <p className="text-sm text-destructive sm:col-span-2">{error}</p> : null}
             <div className="sm:col-span-2">
-              <Button disabled={saving} className="rounded-full bg-teal text-teal-foreground">
+              <Button disabled={saving} className="bg-teal text-teal-foreground">
                 {saving ? "Saving..." : editing ? "Update badge" : "Create badge"}
               </Button>
             </div>
@@ -197,7 +197,7 @@ export default function AdminBadgesPage() {
             header: "Label",
             cell: (badge) => (
               <span
-                className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${badgeToneClass(badge.tone)}`}
+                className={`px-3 py-1 text-xs font-semibold uppercase ${badgeToneClass(badge.tone)}`}
               >
                 {badge.label}
               </span>

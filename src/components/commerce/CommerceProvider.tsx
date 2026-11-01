@@ -272,13 +272,10 @@ export function CommerceProvider({ children }: { children: ReactNode }) {
   const buyNow = useCallback(
     async (item: CartItemInput) => {
       sessionStorage.setItem(BUY_NOW_KEY, JSON.stringify(item));
-      if (!customer) {
-        openAuth({ type: "buy_now", item, redirect: "/checkout?mode=buy_now" });
-        return;
-      }
+      // Guests can check out too; the checkout page offers login as an option.
       router.push("/checkout?mode=buy_now");
     },
-    [customer, openAuth, router],
+    [router],
   );
 
   const updateCartQuantity = useCallback(
@@ -452,7 +449,6 @@ export function CommerceProvider({ children }: { children: ReactNode }) {
   const applySuccessfulOrder = useCallback(
     async (order: Order, mode: "cart" | "buy_now") => {
       void refreshCatalog(true);
-      router.refresh();
       const ordered = new Set(
         (order.items ?? []).map((item) =>
           guestLineKey({ productId: item.productId, size: item.size, color: item.color }),
@@ -498,7 +494,7 @@ export function CommerceProvider({ children }: { children: ReactNode }) {
       }
       closeCart();
     },
-    [closeCart, customer, refreshCatalog, router],
+    [closeCart, customer, refreshCatalog],
   );
 
   const toggleWishlist = useCallback(

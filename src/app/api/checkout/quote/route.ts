@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 
 import { quoteCheckout } from "@/lib/commerce.server";
 import { checkoutSchema } from "@/lib/commerce-types";
-import { getCustomerSession } from "@/lib/customer-auth.server";
+import { getCheckoutCustomer } from "@/lib/guest-checkout.server";
 import { actionErrorMessage } from "@/lib/form-request";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const session = await getCustomerSession();
+    const session = await getCheckoutCustomer();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const body = checkoutSchema.parse(await request.json());
     const quote = await quoteCheckout(session, body);

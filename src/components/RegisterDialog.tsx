@@ -558,7 +558,7 @@ export function RegisterDialog({ open, onOpenChange, product }: Props) {
                       "Priority Launch Notification",
                     ].map((benefit) => (
                       <li key={benefit} className="flex items-center gap-3 text-sm">
-                        <Check className="size-4 shrink-0 text-olive" strokeWidth={2} />
+                        <Check className="size-4 shrink-0 text-foreground" strokeWidth={2} />
                         {benefit}
                       </li>
                     ))}
@@ -727,7 +727,7 @@ function SuccessScreen({
   return (
     <div className="flex h-full flex-col overflow-y-auto px-6 py-12 text-center">
       <div className="flex flex-1 flex-col items-center justify-center">
-        <div className="animate-scale-in mx-auto flex size-16 items-center justify-center rounded-full bg-olive text-olive-foreground">
+        <div className="animate-scale-in mx-auto flex size-16 items-center justify-center rounded-full bg-ink text-white">
           <Check className="size-7" strokeWidth={1.5} />
         </div>
         <DialogTitle asChild>
@@ -782,7 +782,7 @@ function AlreadyReservedScreen({
   return (
     <div className="flex h-full flex-col overflow-y-auto px-6 py-12 text-center">
       <div className="flex flex-1 flex-col items-center justify-center">
-        <div className="animate-scale-in mx-auto flex size-16 items-center justify-center rounded-full bg-olive text-olive-foreground">
+        <div className="animate-scale-in mx-auto flex size-16 items-center justify-center rounded-full bg-ink text-white">
           <Check className="size-7" strokeWidth={1.5} />
         </div>
         <DialogTitle asChild>

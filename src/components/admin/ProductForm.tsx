@@ -166,7 +166,7 @@ export function ProductForm({ mode, initial }: { mode: "create" | "edit"; initia
             value={form.description}
             onChange={(e) => set("description", e.target.value)}
             rows={4}
-            className="rounded-xl bg-white"
+            className="bg-white"
           />
         </div>
 
@@ -223,7 +223,7 @@ export function ProductForm({ mode, initial }: { mode: "create" | "edit"; initia
                 Stock is tracked per colour and size. Set 0 to mark a variant out of stock.
               </p>
             </div>
-            <div className="overflow-x-auto rounded-2xl border border-border">
+            <div className="overflow-x-auto border border-border">
               <table className="min-w-full text-sm">
                 <thead className="bg-muted/60 text-left text-xs tracking-[0.08em] text-muted-foreground uppercase">
                   <tr>
@@ -247,7 +247,7 @@ export function ProductForm({ mode, initial }: { mode: "create" | "edit"; initia
                           onChange={(event) =>
                             setStock(row.color, row.size, Number(event.target.value))
                           }
-                          className="ml-auto h-10 w-24 rounded-xl bg-white text-right"
+                          className="ml-auto h-10 w-24 bg-white text-right"
                         />
                       </td>
                     </tr>
@@ -261,20 +261,11 @@ export function ProductForm({ mode, initial }: { mode: "create" | "edit"; initia
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
         <div className="flex gap-3">
-          <Button
-            type="submit"
-            disabled={saving}
-            className="rounded-full bg-teal text-teal-foreground"
-          >
+          <Button type="submit" disabled={saving} className="bg-teal text-teal-foreground">
             {saving ? <Loader2 className="size-4 animate-spin" /> : null}
             {mode === "create" ? "Create product" : "Save changes"}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full"
-            onClick={() => router.back()}
-          >
+          <Button type="button" variant="outline" className="" onClick={() => router.back()}>
             Cancel
           </Button>
         </div>
@@ -310,7 +301,7 @@ function Field({
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="h-11 rounded-xl bg-white"
+        className="h-11 bg-white"
       />
     </div>
   );

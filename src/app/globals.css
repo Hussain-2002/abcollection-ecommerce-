@@ -3,12 +3,14 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* Real hover (mouse) on a roomy screen: quick-add panels, image swaps. */
+@custom-variant can-hover (@media (hover: hover) and (min-width: 900px));
 
 /*
- * AB COLLECTION — brand cheat sheet
- * AB Black #111111 · Charcoal #2B2B2B · Warm Ivory #F7F4EE
- * Soft Cream #EDE7DC · Champagne Gold #B89A5A
- * Cormorant Garamond (editorial) + Inter (UI / body)
+ * AB COLLECTION — design system
+ * Ink #111111 · Bone #F6F4F0 · Paper #FFFFFF · Sand #E9E3D8 · Line #E2DED7
+ * Muted #6B6862 · Gold lives only in the logo artwork, never in UI
+ * Bodoni Moda (editorial headlines) + Jost (UI / body). Square corners.
  */
 
 @theme inline {
@@ -16,8 +18,8 @@
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) + 4px);
   --radius-xl: calc(var(--radius) + 10px);
-  --font-display: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
-  --font-sans: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bodoni), "Bodoni Moda", Didot, "Times New Roman", serif;
+  --font-sans: var(--font-jost), Jost, "Helvetica Neue", Arial, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -49,6 +51,10 @@
   --color-cream: var(--soft-cream);
   --color-ivory: var(--warm-ivory);
   --color-charcoal: var(--charcoal);
+  --color-paper: var(--paper);
+  --color-line: var(--border);
+  --color-bone: var(--warm-ivory);
+  --ease-brand: cubic-bezier(0.22, 0.61, 0.36, 1);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -61,47 +67,57 @@
 }
 
 :root {
+  /*
+   * Surfaces: page (bone) < card (paper, white). Sand is editorial only:
+   * image placeholders and full-bleed story bands, never form or summary UI.
+   */
   --ab-black: #111111;
-  --charcoal: #2b2b2b;
-  --warm-ivory: #f7f4ee;
-  --soft-cream: #ede7dc;
-  --gold: #b89a5a;
-  --radius: 0.75rem;
-  --background: #f7f4ee;
+  --charcoal: #3b3935;
+  --warm-ivory: #f6f5f2;
+  --soft-cream: #ebe6dd;
+  --paper: #ffffff;
+  --gold: #111111;
+  --radius: 0px;
+  --page-pad: clamp(1rem, 3.2vw, 2.75rem);
+  --header-h: 60px;
+  --announce-h: 36px;
+  --background: #f6f5f2;
   --foreground: #111111;
-  --card: #f7f4ee;
+  --card: #ffffff;
   --card-foreground: #111111;
-  --popover: #f7f4ee;
+  --popover: #ffffff;
   --popover-foreground: #111111;
-  --primary: #b89a5a;
-  --primary-foreground: #111111;
-  --secondary: #ede7dc;
+  --primary: #111111;
+  --primary-foreground: #ffffff;
+  --secondary: #efede9;
   --secondary-foreground: #111111;
-  --muted: #ede7dc;
-  --muted-foreground: color-mix(in srgb, #2b2b2b 68%, #f7f4ee);
-  --accent: #ede7dc;
-  --accent-foreground: #b89a5a;
-  --destructive: #dc2626;
+  --muted: #efede9;
+  --muted-foreground: #6b6862;
+  --accent: #efede9;
+  --accent-foreground: #111111;
+  --destructive: #b42318;
   --destructive-foreground: #ffffff;
-  --border: #e0d8cc;
-  --input: #e0d8cc;
-  --ring: #b89a5a;
-  --sand: #ede7dc;
+  --border: #e4e0d9;
+  --input: #d6d1c8;
+  --ring: #111111;
+  --sand: #ebe6dd;
   --sand-foreground: #111111;
-  --olive: #b89a5a;
-  --olive-foreground: #111111;
+  --olive: #111111;
+  --olive-foreground: #ffffff;
   --ink: #111111;
-  --ink-foreground: #f7f4ee;
-  --teal: #b89a5a;
-  --teal-foreground: #111111;
-  --sidebar: #111111;
-  --sidebar-foreground: #f7f4ee;
-  --sidebar-primary: #b89a5a;
-  --sidebar-primary-foreground: #111111;
-  --sidebar-accent: #2b2b2b;
-  --sidebar-accent-foreground: #f7f4ee;
-  --sidebar-border: #3a3a3a;
-  --sidebar-ring: #b89a5a;
+  --ink-foreground: #f1efea;
+  /* Legacy name: every primary action uses ink now. */
+  --teal: #111111;
+  --teal-foreground: #ffffff;
+  /* Admin uses the same light, ink-on-white system as the store. */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #111111;
+  --sidebar-primary: #111111;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #efede9;
+  --sidebar-accent-foreground: #111111;
+  --sidebar-border: #e4e0d9;
+  --sidebar-ring: #111111;
 }
 
 @layer base {
@@ -111,12 +127,16 @@
 
   html {
     max-width: 100%;
+    scroll-padding-top: calc(var(--header-h) + 16px);
   }
 
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.6;
+    letter-spacing: 0.01em;
     -webkit-font-smoothing: antialiased;
     max-width: 100%;
   }
@@ -124,11 +144,21 @@
   h1,
   h2,
   h3,
-  h4,
+  h4 {
+    font-family: var(--font-sans);
+    font-weight: 300;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+
   blockquote {
     font-family: var(--font-display);
-    font-weight: 600;
-    letter-spacing: -0.02em;
+    font-weight: 400;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-foreground);
+    outline-offset: 2px;
   }
 
   button,
@@ -140,19 +170,89 @@
 
 @utility eyebrow {
   font-family: var(--font-sans);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--color-muted-foreground);
 }
 
+/* Page gutter used by every storefront section. */
+@utility page-wrap {
+  width: 100%;
+  max-width: 1600px;
+  margin-inline: auto;
+  padding-inline: var(--page-pad);
+}
+
+/* Small uppercase tracked label: buttons, card titles, nav. */
+@utility label-caps {
+  font-size: 0.76rem;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* Editorial serif headline. */
+@utility editorial {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+}
+
+/* Hairline that draws in from the left on hover, open or current page. */
+@utility nav-underline {
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0.3rem;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 350ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  &:hover::after,
+  &[aria-expanded="true"]::after,
+  &[aria-current="page"]::after {
+    transform: scaleX(1);
+  }
+}
+
+/* Loading placeholder: a soft light sweep, still in reduced motion. */
+@utility skeleton {
+  background-color: var(--color-muted);
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: shimmer 1.4s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    background-image: none;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @utility reveal {
   opacity: 0;
-  transform: translateY(22px);
+  transform: translateY(24px);
   transition:
-    opacity 800ms cubic-bezier(0.16, 1, 0.3, 1),
-    transform 800ms cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 900ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 900ms cubic-bezier(0.22, 0.61, 0.36, 1);
 
   &[data-visible="true"] {
     opacity: 1;
@@ -181,6 +281,51 @@
   }
 }
 
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes ken-burns {
+  from {
+    transform: scale(1.12) translate3d(0, -1%, 0);
+  }
+  to {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes line-up {
+  from {
+    transform: translateY(110%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+@utility animate-marquee {
+  animation: marquee 40s linear infinite;
+}
+
+@utility animate-ken-burns {
+  animation: ken-burns 9s ease-out both;
+}
+
+@utility animate-line-up {
+  animation: line-up 1s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
 @utility animate-fan-in {
   animation: fan-in 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -197,7 +342,10 @@
   }
 
   .animate-fan-in,
-  .animate-float-soft {
+  .animate-float-soft,
+  .animate-marquee,
+  .animate-ken-burns,
+  .animate-line-up {
     animation: none;
   }
 }

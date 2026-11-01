@@ -45,13 +45,13 @@ export default async function AdminDashboardPage() {
         description="Sales, orders, and catalogue health for the last 7 days."
         actions={
           <>
-            <Button asChild variant="outline" className="rounded-full">
+            <Button asChild variant="outline" className="">
               <Link href="/admin/analytics">Open analytics</Link>
             </Button>
-            <Button asChild variant="outline" className="rounded-full">
+            <Button asChild variant="outline" className="">
               <Link href="/admin/orders/new">Add order</Link>
             </Button>
-            <Button asChild className="rounded-full bg-teal text-teal-foreground hover:bg-teal/90">
+            <Button asChild className="bg-teal text-teal-foreground hover:bg-teal/90">
               <Link href="/admin/products/new">Add product</Link>
             </Button>
           </>
@@ -93,7 +93,7 @@ export default async function AdminDashboardPage() {
         <Card className="bg-white shadow-none">
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="font-display text-xl">Recent orders</CardTitle>
-            <Button asChild variant="ghost" size="sm" className="rounded-full">
+            <Button asChild variant="ghost" size="sm" className="">
               <Link href="/admin/orders">View all</Link>
             </Button>
           </CardHeader>
@@ -103,7 +103,7 @@ export default async function AdminDashboardPage() {
                 <Link
                   key={order.id}
                   href={`/admin/orders/${order.id}`}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2 text-sm hover:bg-muted/40"
+                  className="flex items-center justify-between gap-3 border border-border px-3 py-2 text-sm hover:bg-muted/40"
                 >
                   <span>
                     <span className="font-medium">#{order.orderNumber}</span>
@@ -128,7 +128,7 @@ export default async function AdminDashboardPage() {
         <Card className="bg-white shadow-none">
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="font-display text-xl">Low stock</CardTitle>
-            <Button asChild variant="ghost" size="sm" className="rounded-full">
+            <Button asChild variant="ghost" size="sm" className="">
               <Link href="/admin/products">Manage products</Link>
             </Button>
           </CardHeader>
@@ -137,7 +137,7 @@ export default async function AdminDashboardPage() {
               lowStock.map((row) => (
                 <div
                   key={`${row.product}-${row.color}-${row.size}`}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2 text-sm"
+                  className="flex items-center justify-between gap-3 border border-border px-3 py-2 text-sm"
                 >
                   <span>
                     <span className="font-medium">{row.product}</span>

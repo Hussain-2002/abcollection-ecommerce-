@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 import { GoogleAnalytics } from "@/components/site/GoogleAnalytics";
@@ -10,17 +10,22 @@ import { SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
+// Fonts are self-hosted: Turbopack cannot resolve Google's kit font URLs. (Both SIL OFL 1.1)
+const jost = localFont({
+  src: [{ path: "./fonts/jost-latin.woff2", weight: "300 600", style: "normal" }],
+  variable: "--font-jost",
   display: "swap",
+  fallback: ["Helvetica Neue", "Arial", "sans-serif"],
 });
 
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-cormorant",
+const bodoni = localFont({
+  src: [
+    { path: "./fonts/bodoni-moda-latin.woff2", weight: "400 500", style: "normal" },
+    { path: "./fonts/bodoni-moda-latin-italic.woff2", weight: "400 500", style: "italic" },
+  ],
+  variable: "--font-bodoni",
   display: "swap",
+  fallback: ["Didot", "Times New Roman", "serif"],
 });
 
 export const metadata: Metadata = {
@@ -46,6 +51,7 @@ export const metadata: Metadata = {
   ],
   icons: {
     icon: [{ url: "/favicon.png", type: "image/png" }],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
   openGraph: {
     siteName: SITE_NAME,
@@ -66,7 +72,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${cormorant.variable}`}>
+    <html lang="en" className={`${jost.variable} ${bodoni.variable}`}>
       <head>
         <link rel="alternate" type="text/plain" href={canonicalUrl("/llms.txt")} title="LLMs.txt" />
         <link rel="alternate" type="text/plain" href={canonicalUrl("/ai.txt")} title="AI.txt" />

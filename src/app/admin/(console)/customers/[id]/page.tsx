@@ -87,7 +87,7 @@ export default async function AdminCustomerDetailPage({
             <Link
               key={order.id}
               href={`/admin/orders/${order.id}`}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border px-4 py-3 text-sm hover:bg-muted/40"
+              className="flex flex-wrap items-center justify-between gap-3 border border-border px-4 py-3 text-sm hover:bg-muted/40"
             >
               <div>
                 <p className="font-medium">#{order.orderNumber}</p>

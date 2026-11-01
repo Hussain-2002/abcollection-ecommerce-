@@ -21,7 +21,7 @@ export default async function AdminBundlesPage() {
         title="Bundle offers"
         description="Active bundles appear on product pages for included items."
         actions={
-          <Button asChild className="rounded-full bg-teal text-teal-foreground hover:bg-teal/90">
+          <Button asChild className="bg-teal text-teal-foreground hover:bg-teal/90">
             <Link href="/admin/bundles/new">Add bundle</Link>
           </Button>
         }

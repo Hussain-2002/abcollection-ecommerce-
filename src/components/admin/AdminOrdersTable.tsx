@@ -184,7 +184,7 @@ export function AdminOrdersTable({ initialOrders }: { initialOrders: Order[] }) 
       footer={
         <>
           Changing status here updates the customer account and tracking page within a few seconds.
-          <Button asChild variant="ghost" className="ml-2 h-8 rounded-full px-3 text-xs">
+          <Button asChild variant="ghost" className="ml-2 h-8 px-3 text-xs">
             <Link href="/admin/orders">Refresh list</Link>
           </Button>
         </>

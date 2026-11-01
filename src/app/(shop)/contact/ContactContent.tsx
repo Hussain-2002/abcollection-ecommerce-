@@ -61,7 +61,7 @@ export function ContactContent() {
   return (
     <div className="mx-auto max-w-4xl px-5 py-16 sm:px-8 sm:py-24">
       <div className="text-center">
-        <p className="eyebrow text-gold">Get in touch</p>
+        <p className="eyebrow">Get in touch</p>
         <h1 className="mt-5 font-display text-[2.35rem] font-semibold tracking-tight sm:text-6xl">
           Contact
         </h1>
@@ -75,7 +75,7 @@ export function ContactContent() {
         onSubmit={handleSubmit}
         aria-busy={loading}
         noValidate
-        className="mx-auto mt-14 max-w-2xl space-y-6 rounded-3xl border border-gold/25 bg-cream p-7 text-left sm:p-10"
+        className="mx-auto mt-14 max-w-2xl space-y-6 border border-border bg-paper p-7 text-left sm:p-10"
       >
         <div className="grid gap-6 sm:grid-cols-2">
           <div>
@@ -89,7 +89,7 @@ export function ContactContent() {
               maxLength={100}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-2 h-12 rounded-full border-gold/20 bg-ivory px-5"
+              className="mt-2 h-12 bg-paper px-5"
             />
           </div>
           <div>
@@ -103,7 +103,7 @@ export function ContactContent() {
               maxLength={255}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-2 h-12 rounded-full border-gold/20 bg-ivory px-5"
+              className="mt-2 h-12 bg-paper px-5"
             />
           </div>
         </div>
@@ -117,7 +117,7 @@ export function ContactContent() {
             maxLength={20}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="mt-2 h-12 rounded-full border-gold/20 bg-ivory px-5"
+            className="mt-2 h-12 bg-paper px-5"
           />
         </div>
         <div>
@@ -132,14 +132,14 @@ export function ContactContent() {
             rows={6}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className="mt-2 min-h-36 rounded-3xl border-gold/20 bg-ivory px-5 py-3"
+            className="mt-2 min-h-36 bg-paper px-5 py-3"
           />
         </div>
         <FormAlert error={error} />
         <Button
           type="submit"
           disabled={loading}
-          className="h-12 w-full rounded-full bg-gold px-8 text-xs font-semibold tracking-[0.16em] text-foreground uppercase hover:bg-gold/90 sm:w-auto"
+          className="h-12 w-full bg-ink px-8 text-xs font-normal tracking-[0.18em] text-white uppercase hover:bg-[#333] sm:w-auto"
         >
           {loading ? (
             <>
@@ -155,9 +155,9 @@ export function ContactContent() {
       <div className="mx-auto mt-10 grid max-w-2xl gap-4 sm:grid-cols-2">
         <a
           href={`mailto:${SITE_EMAIL}`}
-          className="rounded-3xl border border-gold/20 bg-cream p-6 text-left transition-colors hover:border-gold sm:p-8"
+          className="border border-border bg-paper p-6 text-left transition-colors hover:border-foreground sm:p-8"
         >
-          <Mail className="size-5 text-gold" />
+          <Mail className="size-5" strokeWidth={1.4} />
           <p className="mt-4 font-semibold">Email</p>
           <p className="mt-2 text-sm text-charcoal break-all">{SITE_EMAIL}</p>
         </a>
@@ -165,22 +165,22 @@ export function ContactContent() {
           href={SITE_INSTAGRAM}
           target="_blank"
           rel="noreferrer noopener"
-          className="rounded-3xl border border-gold/20 bg-cream p-6 text-left transition-colors hover:border-gold sm:p-8"
+          className="border border-border bg-paper p-6 text-left transition-colors hover:border-foreground sm:p-8"
         >
-          <Instagram className="size-5 text-gold" />
+          <Instagram className="size-5" strokeWidth={1.4} />
           <p className="mt-4 font-semibold">Instagram</p>
           <p className="mt-2 text-sm text-charcoal">@abcollection.co.in</p>
         </a>
       </div>
 
-      <div className="mx-auto mt-14 max-w-2xl rounded-3xl bg-cream px-5 py-12 text-center sm:px-8">
+      <div className="mx-auto mt-14 max-w-2xl border border-border bg-paper px-5 py-12 text-center sm:px-8">
         <h2 className="font-display text-3xl font-semibold">Ready to shop?</h2>
         <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-charcoal">
           Browse the collection, add pieces to your cart, and checkout when you&apos;re ready.
         </p>
         <Button
           asChild
-          className="mt-7 h-12 w-full max-w-xs rounded-full bg-gold px-8 text-xs font-semibold tracking-[0.16em] text-foreground uppercase hover:bg-gold/90 sm:w-auto sm:max-w-none"
+          className="mt-7 h-12 w-full max-w-xs bg-ink px-8 text-xs font-normal tracking-[0.18em] text-white uppercase hover:bg-[#333] sm:w-auto sm:max-w-none"
         >
           <Link href="/collection">Shop Collection</Link>
         </Button>

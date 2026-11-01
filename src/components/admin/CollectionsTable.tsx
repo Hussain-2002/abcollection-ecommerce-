@@ -27,11 +27,7 @@ export function CollectionsTable({ collections }: { collections: Collection[] })
           header: "Collection",
           cell: (collection) => (
             <div className="flex items-center gap-3">
-              <img
-                src={collection.image}
-                alt=""
-                className="size-12 rounded-lg object-cover object-top"
-              />
+              <img src={collection.image} alt="" className="size-12 object-cover object-top" />
               <div>
                 <p className="font-medium">{collection.title}</p>
                 <p className="text-xs text-muted-foreground">{collection.id}</p>

@@ -1,6 +1,6 @@
 import type { Product } from "@/lib/catalog-types";
 import { productHasPurchasableStock } from "@/lib/inventory";
-import { badgeToneClass, type ProductBadge } from "@/lib/promotions";
+import { type ProductBadge } from "@/lib/promotions";
 import { cn } from "@/lib/utils";
 
 export function productDisplayBadges(product: Product): ProductBadge[] {
@@ -36,17 +36,33 @@ export function productDisplayBadges(product: Product): ProductBadge[] {
   return assigned.sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
-export function ProductBadgeList({ product, className }: { product: Product; className?: string }) {
+function toneClass(tone: ProductBadge["tone"] | undefined) {
+  if (tone === "ink" || tone === "teal") return "bg-ink text-white";
+  if (tone === "sale") return "bg-[#9a3412] text-white";
+  return "bg-white text-foreground";
+}
+
+/** Square white tags (ink for sold out), like a printed swing tag. */
+export function ProductBadgeList({
+  product,
+  className,
+  limit,
+}: {
+  product: Product;
+  className?: string;
+  limit?: number;
+}) {
   const badges = productDisplayBadges(product);
   if (!badges.length) return null;
+  const shown = limit ? badges.slice(0, limit) : badges;
   return (
-    <div className={cn("flex flex-wrap gap-1.5", className)}>
-      {badges.map((badge) => (
+    <div className={cn("flex flex-wrap gap-1", className)}>
+      {shown.map((badge) => (
         <span
           key={badge.id}
           className={cn(
-            "rounded-full px-3 py-1 text-[0.65rem] font-semibold tracking-[0.08em] uppercase shadow-sm",
-            badgeToneClass(badge.tone),
+            "px-2 py-1 text-[0.62rem] leading-none tracking-[0.16em] uppercase",
+            toneClass(badge.tone),
           )}
         >
           {badge.label}

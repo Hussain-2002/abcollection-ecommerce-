@@ -41,7 +41,7 @@ export function useAddToCart() {
 
 export function addToCartLabel(status: AddToCartStatus) {
   if (status === "adding") return "Adding...";
-  if (status === "added") return "Added ✓";
+  if (status === "added") return "Added to bag";
   if (status === "error") return "Try again";
-  return "Add to Cart";
+  return "Add to bag";
 }

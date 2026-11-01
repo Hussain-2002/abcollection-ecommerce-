@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import { CommerceProvider } from "@/components/commerce/CommerceProvider";
 import { CommerceToaster } from "@/components/commerce/CommerceToaster";
+import { MembershipProvider } from "@/components/membership/MembershipProvider";
 import { CatalogProvider } from "@/components/site/CatalogProvider";
 import {
   IstefadaOfferActivation,
@@ -25,8 +26,10 @@ export function AppProviders({ children, catalog }: { children: ReactNode; catal
       <IstefadaOfferActivation />
       <CatalogProvider initial={catalog}>
         <CommerceProvider>
-          <SiteShell>{children}</SiteShell>
-          <CommerceToaster />
+          <MembershipProvider>
+            <SiteShell>{children}</SiteShell>
+            <CommerceToaster />
+          </MembershipProvider>
         </CommerceProvider>
       </CatalogProvider>
     </IstefadaOfferProvider>

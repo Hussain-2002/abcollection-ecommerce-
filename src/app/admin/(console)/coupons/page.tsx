@@ -116,7 +116,7 @@ export default function AdminCouponsPage() {
         actions={
           <Button
             type="button"
-            className="rounded-full bg-teal text-teal-foreground hover:bg-teal/90"
+            className="bg-teal text-teal-foreground hover:bg-teal/90"
             onClick={() => {
               setForm(emptyCoupon());
               setError("");
@@ -228,7 +228,7 @@ export default function AdminCouponsPage() {
                     startsAt: event.target.value ? new Date(event.target.value).toISOString() : "",
                   }))
                 }
-                className="h-11 rounded-xl bg-white"
+                className="h-11 bg-white"
               />
             </div>
             <div className="space-y-2">
@@ -243,7 +243,7 @@ export default function AdminCouponsPage() {
                     endsAt: event.target.value ? new Date(event.target.value).toISOString() : "",
                   }))
                 }
-                className="h-11 rounded-xl bg-white"
+                className="h-11 bg-white"
               />
             </div>
             <label className="flex items-center gap-2 text-sm">
@@ -257,7 +257,7 @@ export default function AdminCouponsPage() {
             </label>
             {error ? <p className="text-sm text-destructive sm:col-span-2">{error}</p> : null}
             <div className="sm:col-span-2">
-              <Button disabled={saving} className="rounded-full bg-teal text-teal-foreground">
+              <Button disabled={saving} className="bg-teal text-teal-foreground">
                 {saving ? "Saving..." : editing ? "Update coupon" : "Create coupon"}
               </Button>
             </div>
@@ -344,7 +344,7 @@ function Field({
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 rounded-xl bg-white"
+        className="h-11 bg-white"
       />
     </div>
   );

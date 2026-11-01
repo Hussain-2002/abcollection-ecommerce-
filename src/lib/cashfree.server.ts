@@ -77,20 +77,49 @@ export function storefrontOrigin(value: string) {
   return "";
 }
 
+/**
+ * `next dev` against the Cashfree sandbox sends shoppers back to the machine they
+ * came from (localhost or a phone on the LAN) instead of the live storefront.
+ */
+function localSandboxOrigin(value: string) {
+  if (process.env.NODE_ENV === "production" || cashfreeEnv() !== "sandbox") return "";
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.origin : "";
+  } catch {
+    return "";
+  }
+}
+
 export function requestStorefrontOrigin(request: Request) {
   const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() || "";
   const host = forwardedHost || request.headers.get("host")?.trim() || "";
   const proto =
     (request.headers.get("x-forwarded-proto") || "https").split(",")[0]?.trim() || "https";
-  return storefrontOrigin(`${proto}://${host}`) || CANONICAL_SITE_ORIGIN;
+  const origin = `${proto}://${host}`;
+  return localSandboxOrigin(origin) || storefrontOrigin(origin) || CANONICAL_SITE_ORIGIN;
 }
 
-function cashfreeReturnUrl(origin?: string) {
+function cashfreeReturnUrl(origin?: string, returnPath = "/checkout/return") {
   const override = httpsOrigin(process.env["CASHFREE_RETURN_URL"] || "");
   const site =
-    storefrontOrigin(origin || "") || storefrontOrigin(SITE_URL) || CANONICAL_SITE_ORIGIN;
+    localSandboxOrigin(origin || "") ||
+    storefrontOrigin(origin || "") ||
+    storefrontOrigin(SITE_URL) ||
+    CANONICAL_SITE_ORIGIN;
   const base = override || site;
-  return `${base}/checkout/return?order_id={order_id}`;
+  return `${base}${returnPath}?order_id={order_id}`;
+}
+
+/** Membership fee orders use their own prefix so webhooks can route them. */
+export const MEMBERSHIP_ORDER_PREFIX = "abm";
+
+export function isMembershipGatewayOrder(orderId: string) {
+  return orderId.trim().toLowerCase().startsWith(MEMBERSHIP_ORDER_PREFIX);
+}
+
+export function membershipGatewayOrderId(membershipId: string) {
+  return `${MEMBERSHIP_ORDER_PREFIX}${membershipId.replace(/-/g, "")}`;
 }
 
 export function cashfreeOrderIdFromCheckoutId(checkoutId: string) {
@@ -147,9 +176,30 @@ export async function createCashfreeOrder(input: {
   customerPhone: string;
   returnOrigin?: string;
 }) {
-  const orderId = cashfreeOrderIdFromCheckoutId(input.checkoutId);
-  const returnUrl = cashfreeReturnUrl(input.returnOrigin);
+  return createCashfreeGatewayOrder({
+    ...input,
+    orderId: cashfreeOrderIdFromCheckoutId(input.checkoutId),
+    returnPath: "/checkout/return",
+    note: "AB Collection",
+  });
+}
+
+/** Creates (or returns the existing) Cashfree order for any purchase on the site. */
+export async function createCashfreeGatewayOrder(input: {
+  orderId: string;
+  amount: number;
+  customerId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  returnOrigin?: string;
+  returnPath: string;
+  note: string;
+}) {
+  const orderId = input.orderId;
+  const returnUrl = cashfreeReturnUrl(input.returnOrigin, input.returnPath);
   const notifyOrigin =
+    localSandboxOrigin(input.returnOrigin || "") ||
     storefrontOrigin(input.returnOrigin || "") ||
     storefrontOrigin(SITE_URL) ||
     CANONICAL_SITE_ORIGIN;
@@ -163,14 +213,15 @@ export async function createCashfreeOrder(input: {
         customer_details: {
           customer_id: input.customerId.replace(/-/g, "").slice(0, 50),
           customer_name: input.customerName.slice(0, 100),
-          customer_email: input.customerEmail.slice(0, 100),
+          // Guests may skip email; Cashfree only needs the phone.
+          ...(input.customerEmail ? { customer_email: input.customerEmail.slice(0, 100) } : {}),
           customer_phone: input.customerPhone,
         },
         order_meta: {
           return_url: returnUrl,
           notify_url: `${notifyOrigin}/api/payments/cashfree`,
         },
-        order_note: "AB Collection",
+        order_note: input.note,
       }),
     });
   } catch (error) {
@@ -213,13 +264,24 @@ export async function verifyCashfreePayment(orderId: string, expectedAmount: num
   }
   const status = String(order.order_status || "").toUpperCase();
   if (status !== "PAID") {
+    // An ACTIVE order is still open: either the bank has not answered yet
+    // (UPI often takes a while) or every attempt so far failed.
+    const attempts =
+      status === "ACTIVE"
+        ? await getCashfreePayments(orderId).catch(() => [] as CashfreePayment[])
+        : [];
+    const settled = new Set(["FAILED", "USER_DROPPED", "CANCELLED", "VOID"]);
+    const pending =
+      status === "ACTIVE" &&
+      (!attempts.length ||
+        attempts.some((row) => !settled.has(String(row.payment_status || "").toUpperCase())));
     throw Object.assign(
       new Error(
-        status === "ACTIVE"
+        pending
           ? "Payment is still pending. Complete payment to place the order."
           : "Payment was not completed. Your cart is unchanged.",
       ),
-      { status: 409 },
+      { status: 409, code: pending ? "payment_pending" : "payment_failed" },
     );
   }
   const paidAmount = Number(order.order_amount);

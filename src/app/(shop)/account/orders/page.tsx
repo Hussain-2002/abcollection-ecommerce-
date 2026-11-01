@@ -28,7 +28,7 @@ export default function AccountOrdersPage() {
   return (
     <div className="mx-auto max-w-3xl px-5 py-12 sm:px-8 sm:py-16">
       <p className="eyebrow">Account</p>
-      <h1 className="mt-3 font-display text-[2.15rem] font-bold tracking-tight sm:text-5xl">
+      <h1 className="mt-3 font-display text-[2.15rem] font-normal tracking-tight sm:text-5xl">
         My Orders
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
@@ -40,11 +40,11 @@ export default function AccountOrdersPage() {
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
         </div>
       ) : !orders.length ? (
-        <div className="mt-10 rounded-3xl border border-border bg-sand p-8 text-center">
+        <div className="mt-10 border border-border bg-paper p-8 text-center">
           <p className="text-sm text-muted-foreground">You haven&apos;t placed an order yet.</p>
           <Button
             asChild
-            className="mt-6 h-11 rounded-full bg-teal px-8 text-xs tracking-[0.12em] text-teal-foreground uppercase"
+            className="mt-6 h-11 bg-teal px-8 text-xs tracking-[0.12em] text-teal-foreground uppercase"
           >
             <Link href="/collection">Shop Collection</Link>
           </Button>

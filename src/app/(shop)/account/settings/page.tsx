@@ -123,29 +123,29 @@ export default function AccountSettingsPage() {
   return (
     <div className="mx-auto max-w-2xl px-5 py-12 sm:px-8 sm:py-16">
       <p className="eyebrow">Account</p>
-      <h1 className="mt-3 font-display text-[2.15rem] font-bold tracking-tight sm:text-5xl">
+      <h1 className="mt-3 font-display text-[2.15rem] font-normal tracking-tight sm:text-5xl">
         Account settings
       </h1>
 
       <form
         onSubmit={saveProfile}
         aria-busy={saving}
-        className="mt-8 space-y-4 rounded-3xl border border-border p-6"
+        className="mt-8 space-y-4 border border-border p-6"
       >
-        <h2 className="font-display text-2xl font-bold">Profile</h2>
+        <h2 className="font-display text-2xl font-normal">Profile</h2>
         <div>
           <Label htmlFor="fullName">Full name</Label>
           <Input
             id="fullName"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="mt-1.5 h-11 rounded-full"
+            className="mt-1.5 h-11"
             required
           />
         </div>
         <div>
           <Label>Email</Label>
-          <Input value={customer.email} disabled className="mt-1.5 h-11 rounded-full bg-muted" />
+          <Input value={customer.email} disabled className="mt-1.5 h-11 bg-muted" />
         </div>
         <div>
           <Label htmlFor="phone">Primary contact number</Label>
@@ -153,7 +153,7 @@ export default function AccountSettingsPage() {
             id="phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="mt-1.5 h-11 rounded-full"
+            className="mt-1.5 h-11"
             required
           />
         </div>
@@ -163,14 +163,14 @@ export default function AccountSettingsPage() {
             id="alt"
             value={alternatePhone}
             onChange={(e) => setAlternatePhone(e.target.value)}
-            className="mt-1.5 h-11 rounded-full"
+            className="mt-1.5 h-11"
           />
         </div>
         <FormAlert error={profileError} />
         <Button
           type="submit"
           disabled={saving}
-          className="h-11 rounded-full bg-teal px-8 text-xs tracking-[0.12em] text-teal-foreground uppercase"
+          className="h-11 bg-teal px-8 text-xs tracking-[0.12em] text-teal-foreground uppercase"
         >
           {saving ? (
             <>
@@ -183,11 +183,11 @@ export default function AccountSettingsPage() {
         </Button>
       </form>
 
-      <div className="mt-8 rounded-3xl border border-border p-6">
-        <h2 className="font-display text-2xl font-bold">Saved addresses</h2>
+      <div className="mt-8 border border-border p-6">
+        <h2 className="font-display text-2xl font-normal">Saved addresses</h2>
         <div className="mt-4 space-y-3">
           {addresses.map((address) => (
-            <div key={address.id} className="rounded-2xl border border-border p-4 text-sm">
+            <div key={address.id} className="border border-border p-4 text-sm">
               <p className="font-semibold">
                 {address.label}
                 {address.isDefault ? " · Default" : ""}
@@ -214,7 +214,7 @@ export default function AccountSettingsPage() {
               required
               value={line1}
               onChange={(e) => setLine1(e.target.value)}
-              className="mt-1.5 h-11 rounded-full"
+              className="mt-1.5 h-11"
             />
           </div>
           <div className="sm:col-span-2">
@@ -223,7 +223,7 @@ export default function AccountSettingsPage() {
               id="a2"
               value={line2}
               onChange={(e) => setLine2(e.target.value)}
-              className="mt-1.5 h-11 rounded-full"
+              className="mt-1.5 h-11"
             />
           </div>
           <div>
@@ -233,7 +233,7 @@ export default function AccountSettingsPage() {
               required
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              className="mt-1.5 h-11 rounded-full"
+              className="mt-1.5 h-11"
             />
           </div>
           <div>
@@ -243,7 +243,7 @@ export default function AccountSettingsPage() {
               required
               value={state}
               onChange={(e) => setState(e.target.value)}
-              className="mt-1.5 h-11 rounded-full"
+              className="mt-1.5 h-11"
             />
           </div>
           <div>
@@ -253,7 +253,7 @@ export default function AccountSettingsPage() {
               required
               value={pincode}
               onChange={(e) => setPincode(e.target.value)}
-              className="mt-1.5 h-11 rounded-full"
+              className="mt-1.5 h-11"
             />
           </div>
           <div className="sm:col-span-2">
@@ -263,7 +263,7 @@ export default function AccountSettingsPage() {
             <Button
               type="submit"
               disabled={savingAddress}
-              className="h-11 w-full rounded-full bg-ink text-xs tracking-[0.12em] text-ink-foreground uppercase"
+              className="h-11 w-full bg-ink text-xs tracking-[0.12em] text-ink-foreground uppercase"
             >
               {savingAddress ? (
                 <>

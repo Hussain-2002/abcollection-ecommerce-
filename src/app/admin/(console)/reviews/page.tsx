@@ -134,7 +134,7 @@ export default function AdminReviewsPage() {
         actions={
           <Button
             type="button"
-            className="rounded-full bg-teal text-teal-foreground hover:bg-teal/90"
+            className="bg-teal text-teal-foreground hover:bg-teal/90"
             onClick={() => setOpen(true)}
           >
             Add review
@@ -196,7 +196,7 @@ export default function AdminReviewsPage() {
                 required
                 value={reviewerName}
                 onChange={(event) => setReviewerName(event.target.value)}
-                className="h-11 rounded-xl bg-white"
+                className="h-11 bg-white"
                 placeholder="Name shown on the product"
               />
             </div>
@@ -242,16 +242,12 @@ export default function AdminReviewsPage() {
                 value={body}
                 onChange={(event) => setBody(event.target.value)}
                 rows={4}
-                className="rounded-xl bg-white"
+                className="bg-white"
                 placeholder="What the client said about this piece"
               />
             </div>
             <div className="sm:col-span-2">
-              <Button
-                type="submit"
-                disabled={saving}
-                className="h-11 rounded-full bg-teal text-teal-foreground"
-              >
+              <Button type="submit" disabled={saving} className="h-11 bg-teal text-teal-foreground">
                 {saving ? "Adding..." : "Add review"}
               </Button>
             </div>
@@ -275,7 +271,7 @@ export default function AdminReviewsPage() {
                 setStatus(next);
                 void load(next, query);
               }}
-              className="w-auto rounded-full px-4"
+              className="w-auto px-4"
             >
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
@@ -289,12 +285,12 @@ export default function AdminReviewsPage() {
                 if (event.key === "Enter") void load(status, query);
               }}
               placeholder="Filter by product, customer, or order"
-              className="h-11 max-w-md rounded-full bg-white"
+              className="h-11 max-w-md bg-white"
             />
             <Button
               type="button"
               variant="outline"
-              className="h-11 rounded-full"
+              className="h-11"
               onClick={() => void load(status, query)}
             >
               Filter

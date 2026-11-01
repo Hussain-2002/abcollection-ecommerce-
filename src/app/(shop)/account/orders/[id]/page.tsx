@@ -31,7 +31,7 @@ export default function AccountOrderDetailPage() {
         <p className="text-sm text-destructive">{error}</p>
         <Button
           asChild
-          className="mt-6 h-11 rounded-full bg-teal px-8 text-xs tracking-[0.12em] text-teal-foreground uppercase"
+          className="mt-6 h-11 bg-teal px-8 text-xs tracking-[0.12em] text-teal-foreground uppercase"
         >
           <Link href="/account/orders">Back to orders</Link>
         </Button>
@@ -46,7 +46,7 @@ export default function AccountOrderDetailPage() {
       <Link href="/account/orders" className="text-sm text-muted-foreground hover:text-foreground">
         ← My Orders
       </Link>
-      <h1 className="mt-4 min-w-0 break-all font-display text-[clamp(1.75rem,7vw,2.15rem)] font-bold tracking-tight sm:text-4xl">
+      <h1 className="mt-4 min-w-0 break-all font-display text-[clamp(1.75rem,7vw,2.15rem)] font-normal tracking-tight sm:text-4xl">
         Order #{order.orderNumber}
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
@@ -54,7 +54,7 @@ export default function AccountOrderDetailPage() {
       </p>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
-        <section className="rounded-3xl border border-border p-5">
+        <section className="border border-border p-5">
           <h2 className="font-semibold">Status</h2>
           <p className="mt-2 text-sm text-teal">
             Current: {ORDER_STATUS_LABELS[order.orderStatus] ?? order.orderStatus}
@@ -71,7 +71,7 @@ export default function AccountOrderDetailPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-border p-5">
+        <section className="border border-border p-5">
           <h2 className="font-semibold">Delivery</h2>
           <p className="mt-3 text-sm">
             {order.customerName}
@@ -87,7 +87,7 @@ export default function AccountOrderDetailPage() {
         </section>
       </div>
 
-      <section className="mt-8 rounded-3xl border border-border p-5">
+      <section className="mt-8 border border-border p-5">
         <h2 className="font-semibold">Items</h2>
         <ul className="mt-4 space-y-4">
           {order.items.map((item) => (
@@ -99,7 +99,7 @@ export default function AccountOrderDetailPage() {
                   width={128}
                   height={128}
                   sizes="64px"
-                  className="size-16 shrink-0 rounded-xl object-cover object-top"
+                  className="size-16 shrink-0 object-cover object-top"
                 />
               ) : null}
               <div className="min-w-0 flex-1">

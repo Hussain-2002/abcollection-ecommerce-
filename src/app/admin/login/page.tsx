@@ -40,12 +40,19 @@ function LoginForm() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f7f7f5] px-5">
+    <div className="flex min-h-screen items-center justify-center bg-background px-5">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-md rounded-3xl border border-border bg-white p-8 shadow-sm"
+        className="w-full max-w-md border border-border bg-white p-8 shadow-sm"
       >
-        <p className="font-display text-3xl font-bold">AB Admin</p>
+        <img
+          src="/brand/ab-monogram-sm.png"
+          alt="AB Collection"
+          width={180}
+          height={148}
+          className="h-10 w-auto"
+        />
+        <p className="mt-5 text-[0.78rem] font-medium tracking-[0.2em] uppercase">Store console</p>
         <p className="mt-2 text-sm text-muted-foreground">
           Sign in to manage products and collections.
         </p>
@@ -59,7 +66,7 @@ function LoginForm() {
               id="admin-user"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="mt-2 h-11 rounded-xl"
+              className="mt-2 h-11"
               autoComplete="username"
               required
             />
@@ -74,7 +81,7 @@ function LoginForm() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-11 rounded-xl pr-11"
+                className="h-11 pr-11"
                 autoComplete="current-password"
                 required
               />
@@ -99,7 +106,7 @@ function LoginForm() {
         <Button
           type="submit"
           disabled={loading}
-          className="mt-6 h-12 w-full rounded-full bg-teal text-teal-foreground"
+          className="mt-6 h-12 w-full bg-ink text-[0.76rem] font-normal tracking-[0.18em] text-white uppercase"
         >
           {loading ? <Loader2 className="size-4 animate-spin" /> : null}
           Sign in
@@ -111,7 +118,7 @@ function LoginForm() {
 
 export default function AdminLoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#f7f7f5]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
       <LoginForm />
     </Suspense>
   );

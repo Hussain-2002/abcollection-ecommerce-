@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 
 import { OrderListCard } from "@/components/commerce/OrderListCard";
@@ -24,6 +24,12 @@ export default function TrackOrderPage() {
   const [step, setStep] = useState<"number" | "verify">("number");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // Guests arrive from the order confirmation with ?order=AB… already known.
+  useEffect(() => {
+    const fromLink = new URLSearchParams(window.location.search).get("order")?.trim();
+    if (fromLink) setOrderNumber((current) => current || fromLink);
+  }, []);
 
   const requestCode = async (event: FormEvent) => {
     event.preventDefault();
@@ -86,7 +92,7 @@ export default function TrackOrderPage() {
     return (
       <div className="mx-auto max-w-3xl px-5 py-12 sm:px-8 sm:py-16">
         <p className="eyebrow">Account</p>
-        <h1 className="mt-3 font-display text-[2.15rem] font-bold tracking-tight sm:text-5xl">
+        <h1 className="mt-3 font-display text-[2.15rem] font-normal tracking-tight sm:text-5xl">
           Track Your Orders
         </h1>
         <p className="mt-4 text-sm text-muted-foreground">
@@ -115,7 +121,7 @@ export default function TrackOrderPage() {
   return (
     <div className="mx-auto max-w-2xl px-5 py-12 sm:px-8 sm:py-16">
       <p className="eyebrow">Support</p>
-      <h1 className="mt-3 font-display text-[2.15rem] font-bold tracking-tight sm:text-5xl">
+      <h1 className="mt-3 font-display text-[2.15rem] font-normal tracking-tight sm:text-5xl">
         Track Your Order
       </h1>
       <p className="mt-4 text-sm text-muted-foreground">
@@ -134,10 +140,7 @@ export default function TrackOrderPage() {
       </p>
 
       {step === "number" ? (
-        <form
-          onSubmit={requestCode}
-          className="mt-8 space-y-4 rounded-3xl border border-border p-6"
-        >
+        <form onSubmit={requestCode} className="mt-8 space-y-4 border border-border p-6">
           <div>
             <Label htmlFor="orderId">Order ID</Label>
             <Input
@@ -147,7 +150,7 @@ export default function TrackOrderPage() {
               placeholder="ABO-260812-XXXX"
               required
               autoComplete="off"
-              className="mt-1.5 h-11 rounded-full"
+              className="mt-1.5 h-11"
             />
           </div>
           {error ? (
@@ -158,13 +161,13 @@ export default function TrackOrderPage() {
           <Button
             type="submit"
             disabled={submitting}
-            className="h-11 w-full rounded-full bg-teal text-xs tracking-[0.12em] text-teal-foreground uppercase"
+            className="h-11 w-full bg-teal text-xs tracking-[0.12em] text-teal-foreground uppercase"
           >
             {submitting ? <Loader2 className="size-4 animate-spin" /> : "Continue"}
           </Button>
         </form>
       ) : (
-        <form onSubmit={verify} className="mt-8 space-y-4 rounded-3xl border border-border p-6">
+        <form onSubmit={verify} className="mt-8 space-y-4 border border-border p-6">
           <p className="text-sm text-muted-foreground">
             Verification for{" "}
             <span className="font-medium text-foreground">{orderNumber.trim()}</span>
@@ -180,7 +183,7 @@ export default function TrackOrderPage() {
               required
               minLength={4}
               maxLength={4}
-              className="mt-1.5 h-11 rounded-full"
+              className="mt-1.5 h-11"
             />
           </div>
           {error ? (
@@ -191,7 +194,7 @@ export default function TrackOrderPage() {
           <Button
             type="submit"
             disabled={submitting || phoneLast4.length !== 4}
-            className="h-11 w-full rounded-full bg-teal text-xs tracking-[0.12em] text-teal-foreground uppercase"
+            className="h-11 w-full bg-teal text-xs tracking-[0.12em] text-teal-foreground uppercase"
           >
             {submitting ? <Loader2 className="size-4 animate-spin" /> : "Verify & Track"}
           </Button>
@@ -211,9 +214,9 @@ export default function TrackOrderPage() {
       )}
 
       {tracking ? (
-        <div className="mt-8 space-y-6 rounded-3xl border border-border p-6">
+        <div className="mt-8 space-y-6 border border-border p-6">
           <div>
-            <h2 className="font-display text-2xl font-bold">Order #{tracking.orderNumber}</h2>
+            <h2 className="font-display text-2xl font-normal">Order #{tracking.orderNumber}</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               {formatOrderDate(tracking.createdAt)}
             </p>
@@ -238,7 +241,7 @@ export default function TrackOrderPage() {
                     <img
                       src={cdnImageUrl(item.productImage)}
                       alt=""
-                      className="size-14 rounded-xl object-cover object-top"
+                      className="size-14 object-cover object-top"
                     />
                   ) : null}
                   <div>

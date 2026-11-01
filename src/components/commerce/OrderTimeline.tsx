@@ -8,7 +8,7 @@ const TERMINAL = new Set(["cancelled", "failed", "returned"]);
 export function OrderTimeline({ status }: { status: string }) {
   if (TERMINAL.has(status)) {
     return (
-      <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm">
+      <div className="border border-border bg-paper p-4 text-sm">
         <p className="font-semibold">Current Status</p>
         <p className="mt-1 text-muted-foreground">{ORDER_STATUS_LABELS[status] ?? status}</p>
       </div>

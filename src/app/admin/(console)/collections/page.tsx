@@ -22,7 +22,7 @@ export default async function AdminCollectionsPage() {
         title="Collections"
         description="These appear in the Discover Collection section on the homepage."
         actions={
-          <Button asChild className="rounded-full bg-teal text-teal-foreground hover:bg-teal/90">
+          <Button asChild className="bg-teal text-teal-foreground hover:bg-teal/90">
             <Link href="/admin/collections/new">Add collection</Link>
           </Button>
         }

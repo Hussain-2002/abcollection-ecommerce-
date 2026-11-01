@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Award,
+  Crown,
   BarChart3,
   Gift,
   Layers,
@@ -48,6 +49,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
       { href: "/admin/customers", label: "Customers", icon: Users },
+      { href: "/admin/membership", label: "Membership", icon: Crown },
       { href: "/admin/shipping", label: "Shipping", icon: Truck },
     ],
   },

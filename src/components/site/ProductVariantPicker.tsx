@@ -1,77 +1,67 @@
 "use client";
 
+import { ColorSwatchRow } from "@/components/site/ColorSwatchRow";
 import type { Product } from "@/lib/catalog-types";
 import { availableStock, stockStatusLabel, variantHasStock } from "@/lib/inventory";
-import { colorSwatchClass } from "@/lib/product-colors";
 import { productVariantOptions } from "@/lib/product-variants";
 import { cn } from "@/lib/utils";
 
+/** Colour swatches with the colour name, then square size buttons (sold-out sizes struck through). */
 export function ProductVariantPicker({
   product,
   selectedColor,
   selectedSize,
   onColorChange,
   onSizeChange,
+  onSizeGuide,
 }: {
   product: Product;
   selectedColor: string;
   selectedSize: string;
   onColorChange: (color: string) => void;
   onSizeChange: (size: string) => void;
+  onSizeGuide?: (() => void) | undefined;
 }) {
   const options = productVariantOptions(product);
   const selectedStock = availableStock(product, selectedColor, selectedSize);
   const showStock = Boolean(product.variants?.length && selectedColor && selectedSize);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {options.requiresColor ? (
-        <div>
-          <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-            Colour
-          </p>
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-            {options.colors.map((color) => {
-              const selected = color === selectedColor;
-              const colorHasStock = options.sizes.some((size) =>
-                variantHasStock(product, color, size),
-              );
-              return (
-                <button
-                  key={color}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => onColorChange(color)}
-                  className={cn(
-                    "inline-flex min-h-11 shrink-0 items-center gap-2.5 rounded-full border px-4 py-2 text-sm transition-colors outline-none focus-visible:ring-0",
-                    selected
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-background hover:border-foreground",
-                    !colorHasStock ? "opacity-60" : "",
-                  )}
-                >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "size-4 shrink-0 rounded-full",
-                      colorSwatchClass(color),
-                      selected ? "ring-2 ring-background/80" : "",
-                    )}
-                  />
-                  {color}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <fieldset>
+          <legend className="mb-2.5 text-[0.72rem] tracking-[0.16em] uppercase">
+            Colour <span className="font-medium">{selectedColor}</span>
+          </legend>
+          <ColorSwatchRow
+            colors={options.colors}
+            selected={selectedColor}
+            onSelect={onColorChange}
+            label={`${product.name} colours`}
+            isAvailable={(color) =>
+              options.sizes.some((size) => variantHasStock(product, color, size))
+            }
+          />
+        </fieldset>
       ) : null}
 
       {options.requiresSize ? (
-        <div>
-          <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-            Size
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+        <fieldset>
+          <div className="mb-2.5 flex items-center justify-between gap-3">
+            <legend className="text-[0.72rem] tracking-[0.16em] uppercase">
+              Size <span className="font-medium">{selectedSize}</span>
+            </legend>
+            {onSizeGuide ? (
+              <button
+                type="button"
+                onClick={onSizeGuide}
+                className="text-[0.8rem] text-muted-foreground underline underline-offset-[3px] hover:text-foreground"
+              >
+                Size guide
+              </button>
+            ) : null}
+          </div>
+          <div className="grid grid-cols-5 gap-1.5 sm:flex sm:flex-wrap">
             {options.sizes.map((size) => {
               const selected = size === selectedSize;
               const inStock = !selectedColor || variantHasStock(product, selectedColor, size);
@@ -80,14 +70,16 @@ export function ProductVariantPicker({
                   key={size}
                   type="button"
                   aria-pressed={selected}
+                  aria-label={inStock ? `Size ${size}` : `Size ${size}, sold out`}
                   disabled={!inStock}
                   onClick={() => onSizeChange(size)}
                   className={cn(
-                    "inline-flex h-11 min-w-11 items-center justify-center rounded-full border px-3 text-sm transition-colors outline-none focus-visible:ring-0",
+                    "relative inline-flex h-11 min-w-12 items-center justify-center overflow-hidden border px-3 text-sm transition-colors",
                     selected
                       ? "border-foreground bg-foreground text-background"
-                      : "border-border hover:border-foreground",
-                    !inStock ? "cursor-not-allowed opacity-40 hover:border-border" : "",
+                      : "border-border bg-paper hover:border-foreground",
+                    !inStock &&
+                      "cursor-not-allowed text-muted-foreground hover:border-border after:absolute after:inset-x-0 after:top-1/2 after:h-px after:-rotate-[20deg] after:bg-muted-foreground/50",
                   )}
                 >
                   {size}
@@ -95,19 +87,22 @@ export function ProductVariantPicker({
               );
             })}
           </div>
-        </div>
+        </fieldset>
       ) : null}
 
       {showStock ? (
         <p
           className={cn(
             "text-sm",
-            selectedStock <= 0 ? "text-destructive" : "text-muted-foreground",
+            selectedStock <= 0
+              ? "text-destructive"
+              : selectedStock <= 5
+                ? "text-[#9a3412]"
+                : "text-muted-foreground",
           )}
           aria-live="polite"
         >
-          {selectedColor} / {selectedSize}
-          <span className="ml-2 font-medium">{stockStatusLabel(selectedStock)}</span>
+          {stockStatusLabel(selectedStock)}
         </p>
       ) : null}
     </div>

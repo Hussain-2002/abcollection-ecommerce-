@@ -55,14 +55,20 @@ export function AdminShell({ children, username }: { children: ReactNode; userna
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild tooltip="Dashboard">
                 <Link href="/admin">
-                  <span className="flex size-8 items-center justify-center rounded-md bg-gold font-display text-lg leading-none font-bold text-ink">
-                    AB
+                  <span className="flex size-8 shrink-0 items-center justify-center">
+                    <img
+                      src="/brand/ab-monogram-sm.png"
+                      alt=""
+                      width={180}
+                      height={148}
+                      className="h-6 w-auto"
+                    />
                   </span>
                   <span className="grid flex-1 text-left leading-tight">
-                    <span className="truncate font-display text-base font-semibold">AB Admin</span>
-                    <span className="truncate text-xs text-sidebar-foreground/70">
-                      Store console
+                    <span className="truncate text-[0.78rem] font-medium tracking-[0.18em] uppercase">
+                      AB Collection
                     </span>
+                    <span className="truncate text-xs text-muted-foreground">Store console</span>
                   </span>
                 </Link>
               </SidebarMenuButton>
@@ -81,7 +87,7 @@ export function AdminShell({ children, username }: { children: ReactNode; userna
                         asChild
                         isActive={isAdminNavActive(pathname, item.href)}
                         tooltip={item.label}
-                        className="data-[active=true]:bg-gold data-[active=true]:text-ink"
+                        className="data-[active=true]:bg-ink data-[active=true]:font-normal data-[active=true]:text-white"
                       >
                         <Link href={item.href}>
                           <item.icon />
@@ -113,12 +119,12 @@ export function AdminShell({ children, username }: { children: ReactNode; userna
             </SidebarMenuItem>
           </SidebarMenu>
           <div className="flex items-center gap-2 px-2 py-1 group-data-[collapsible=icon]:hidden">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gold text-xs font-semibold text-ink">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ink text-xs font-medium text-white">
               {initial}
             </span>
             <span className="min-w-0">
               <span className="block truncate text-sm font-medium">{username}</span>
-              <span className="block truncate text-xs text-sidebar-foreground/60">Signed in</span>
+              <span className="block truncate text-xs text-muted-foreground">Signed in</span>
             </span>
           </div>
         </SidebarFooter>
@@ -152,7 +158,7 @@ export function AdminShell({ children, username }: { children: ReactNode; userna
           <Button
             type="button"
             variant="outline"
-            className="ml-auto h-8 gap-2 rounded-full px-3 text-muted-foreground"
+            className="ml-auto h-8 gap-2 px-3 text-muted-foreground"
             onClick={() => setCommandOpen(true)}
           >
             <Search className="size-3.5" />

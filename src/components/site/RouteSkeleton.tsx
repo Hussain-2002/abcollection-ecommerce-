@@ -5,17 +5,18 @@ export function RouteSkeleton({
 }) {
   if (variant === "grid") {
     return (
-      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8">
-        <div className="mx-auto h-10 w-64 animate-pulse rounded-full bg-muted" />
-        <div className="mx-auto mt-4 h-4 w-96 max-w-full animate-pulse rounded-full bg-muted" />
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
-          {Array.from({ length: 6 }, (_, i) => (
-            <div key={i} className="overflow-hidden rounded-3xl bg-muted">
-              <div className="aspect-[4/5] animate-pulse bg-muted-foreground/10" />
-              <div className="space-y-2 p-4">
-                <div className="h-4 w-3/4 animate-pulse rounded-full bg-muted-foreground/10" />
-                <div className="h-3 w-1/2 animate-pulse rounded-full bg-muted-foreground/10" />
-              </div>
+      <div aria-busy="true" aria-label="Loading products" className="min-h-[100svh]">
+        <div className="page-wrap pt-[clamp(1.75rem,4vw,3rem)] pb-6">
+          <div className="h-3 w-28 skeleton" />
+          <div className="mt-5 h-12 w-56 skeleton" />
+        </div>
+        <div className="h-12 border-y border-border" />
+        <div className="page-wrap grid grid-cols-2 gap-x-2.5 gap-y-7 pt-5 pb-16 min-[900px]:grid-cols-4 min-[900px]:gap-x-4 min-[900px]:gap-y-10">
+          {Array.from({ length: 8 }, (_, i) => (
+            <div key={i}>
+              <div className="aspect-[2/3] skeleton" />
+              <div className="mt-3 h-3.5 w-3/4 skeleton" />
+              <div className="mt-2 h-3 w-1/2 skeleton" />
             </div>
           ))}
         </div>
@@ -25,13 +26,39 @@ export function RouteSkeleton({
 
   if (variant === "pdp") {
     return (
-      <div className="mx-auto grid max-w-7xl gap-10 px-5 py-12 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:py-20">
-        <div className="aspect-[4/5] animate-pulse rounded-3xl bg-muted" />
-        <div className="space-y-4">
-          <div className="h-10 w-3/4 animate-pulse rounded-full bg-muted" />
-          <div className="h-5 w-1/3 animate-pulse rounded-full bg-muted" />
-          <div className="h-20 w-full animate-pulse rounded-3xl bg-muted" />
-          <div className="h-12 w-full animate-pulse rounded-full bg-muted" />
+      <div
+        aria-busy="true"
+        aria-label="Loading product"
+        className="min-h-[100svh] lg:page-wrap lg:grid lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-12 lg:pt-6 xl:gap-16"
+      >
+        <div className="grid gap-1.5 lg:grid-cols-2">
+          <div className="skeleton aspect-[2/3]" />
+          <div className="skeleton hidden aspect-[2/3] lg:block" />
+          <div className="skeleton hidden aspect-[2/3] lg:block" />
+          <div className="skeleton hidden aspect-[2/3] lg:block" />
+        </div>
+        <div className="page-wrap pt-5 lg:px-0 lg:pt-0">
+          <div className="skeleton h-3 w-24" />
+          <div className="skeleton mt-6 h-6 w-3/4" />
+          <div className="skeleton mt-2 h-4 w-1/3" />
+          <div className="skeleton mt-5 h-6 w-28" />
+          <div className="mt-8 flex gap-2">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div key={i} className="skeleton size-9 rounded-full" />
+            ))}
+          </div>
+          <div className="mt-6 grid grid-cols-5 gap-1.5">
+            {Array.from({ length: 5 }, (_, i) => (
+              <div key={i} className="skeleton h-11" />
+            ))}
+          </div>
+          <div className="skeleton mt-7 h-12 w-full" />
+          <div className="skeleton mt-2 h-12 w-full" />
+          <div className="mt-7 space-y-3">
+            <div className="skeleton h-3 w-full" />
+            <div className="skeleton h-3 w-5/6" />
+            <div className="skeleton h-3 w-2/3" />
+          </div>
         </div>
       </div>
     );
@@ -40,11 +67,11 @@ export function RouteSkeleton({
   if (variant === "form") {
     return (
       <div className="mx-auto max-w-5xl px-5 py-12 sm:px-8 sm:py-16">
-        <div className="h-10 w-56 animate-pulse rounded-full bg-muted" />
-        <div className="mt-3 h-4 w-80 max-w-full animate-pulse rounded-full bg-muted" />
+        <div className="h-10 w-56 skeleton" />
+        <div className="mt-3 h-4 w-80 max-w-full skeleton" />
         <div className="mt-10 space-y-4">
-          <div className="h-40 animate-pulse rounded-3xl bg-muted" />
-          <div className="h-40 animate-pulse rounded-3xl bg-muted" />
+          <div className="h-40 skeleton" />
+          <div className="h-40 skeleton" />
         </div>
       </div>
     );
@@ -52,11 +79,11 @@ export function RouteSkeleton({
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-16">
-      <div className="h-10 w-48 animate-pulse rounded-full bg-muted" />
+      <div className="h-10 w-48 skeleton" />
       <div className="mt-6 space-y-3">
-        <div className="h-4 w-full animate-pulse rounded-full bg-muted" />
-        <div className="h-4 w-5/6 animate-pulse rounded-full bg-muted" />
-        <div className="h-4 w-2/3 animate-pulse rounded-full bg-muted" />
+        <div className="h-4 w-full skeleton" />
+        <div className="h-4 w-5/6 skeleton" />
+        <div className="h-4 w-2/3 skeleton" />
       </div>
     </div>
   );

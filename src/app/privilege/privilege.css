@@ -1,4 +1,14 @@
 .privilege-page {
+  /* Campaign pages keep their champagne-gold accents and soft corners. */
+  --gold: #b89a5a;
+  --olive: #b89a5a;
+  --olive-foreground: #111111;
+  --teal: #b89a5a;
+  --teal-foreground: #111111;
+  --primary: #b89a5a;
+  --primary-foreground: #111111;
+  --ring: #b89a5a;
+  --radius: 0.75rem;
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   background-color: var(--background);
   color: var(--foreground);

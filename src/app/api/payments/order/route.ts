@@ -14,7 +14,8 @@ import {
   rememberGatewayOrder,
 } from "@/lib/commerce.server";
 import { checkoutSchema } from "@/lib/commerce-types";
-import { getCustomerSession } from "@/lib/customer-auth.server";
+import { getCheckoutCustomer } from "@/lib/guest-checkout.server";
+import { isPlaceholderEmail } from "@/lib/guest-email";
 import { actionErrorMessage } from "@/lib/form-request";
 import { normalizeMobile } from "@/lib/reservation-utils";
 
@@ -22,7 +23,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const session = await getCustomerSession();
+    const session = await getCheckoutCustomer();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const body = checkoutSchema.parse(await request.json());
     const checkoutId = body.checkoutId?.trim();
@@ -34,6 +35,19 @@ export async function POST(request: Request) {
     }
 
     const quote = await quoteCheckout(session, body);
+    // Membership expiry or a price change since the shopper last saw the total:
+    // stop and let them confirm the new amount before paying.
+    if (body.expectedTotal !== undefined && body.expectedTotal !== quote.totalAmount) {
+      return NextResponse.json(
+        {
+          error: `Your total changed to ₹${quote.totalAmount.toLocaleString("en-IN")}. Please review it before paying.`,
+          code: "price_changed",
+          totalAmount: quote.totalAmount,
+          memberDiscount: quote.memberDiscount,
+        },
+        { status: 409 },
+      );
+    }
     if (quote.totalAmount <= 0) {
       return NextResponse.json({ skipPayment: true, amount: 0, checkoutId });
     }
@@ -78,7 +92,7 @@ export async function POST(request: Request) {
         amount: quote.totalAmount,
         customerId: session.id,
         customerName: session.fullName,
-        customerEmail: session.email,
+        customerEmail: isPlaceholderEmail(session.email) ? "" : session.email,
         customerPhone: phone,
         returnOrigin: requestStorefrontOrigin(request),
       });

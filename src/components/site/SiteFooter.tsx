@@ -1,22 +1,153 @@
 "use client";
 
 import Link from "next/link";
-import { Instagram, Loader2, Mail } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useCommerce } from "@/components/commerce/CommerceProvider";
+import { BrandLockup } from "@/components/site/Brand";
 import { FormAlert } from "@/components/site/FormAlert";
 import { apiErrorMessage, readJsonBody } from "@/lib/form-request";
 import { LEGAL_NAV_LINKS } from "@/lib/legal/content";
-import { NAV_LINKS, SITE_EMAIL, SITE_INSTAGRAM } from "@/lib/site";
 import { fbqTrack } from "@/lib/meta-pixel";
+import { SITE_EMAIL, SITE_INSTAGRAM } from "@/lib/site";
+import { HELP_LINKS } from "@/lib/storefront";
+
+const SHOP_LINKS = [
+  { href: "/collection", label: "New arrivals" },
+  { href: "/collection", label: "Shop all" },
+  { href: "/about", label: "Our story" },
+  { href: "/journey", label: "Founder's journey" },
+  { href: "/membership", label: "AB Insider membership" },
+  { href: "/account/orders", label: "My orders" },
+  { href: "/account/wishlist", label: "Wishlist" },
+];
+
+const ACCOUNT_PATH = /^\/account(\/|$)/;
 
 export function SiteFooter() {
+  const { customer, openAuth } = useCommerce();
+  // Account pages need a login: logged-out shoppers get the login panel in place.
+  const guardAccount = (href: string) =>
+    !customer && ACCOUNT_PATH.test(href)
+      ? (event: React.MouseEvent) => {
+          event.preventDefault();
+          openAuth({ type: "generic", redirect: href });
+        }
+      : undefined;
+
+  return (
+    <footer>
+      <Newsletter />
+      <div className="page-wrap pt-[clamp(3rem,6vw,5rem)] pb-[calc(2rem+env(safe-area-inset-bottom))]">
+        <div className="grid grid-cols-2 gap-8 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
+          <div className="col-span-2 lg:col-span-1">
+            <BrandLockup className="w-36" />
+            <p className="mt-5 max-w-[36ch] text-sm text-muted-foreground">
+              Premium everyday essentials. Heavyweight cotton, timeless cuts, honest pricing. Made
+              in India.
+            </p>
+          </div>
+          <FooterColumn title="Shop">
+            {SHOP_LINKS.map((link) => (
+              <FooterLink key={link.label} href={link.href} onClick={guardAccount(link.href)}>
+                {link.label}
+              </FooterLink>
+            ))}
+          </FooterColumn>
+          <FooterColumn title="Help">
+            {HELP_LINKS.map((link) => (
+              <FooterLink key={link.href} href={link.href}>
+                {link.label}
+              </FooterLink>
+            ))}
+          </FooterColumn>
+          <FooterColumn title="Contact">
+            <a
+              href={`mailto:${SITE_EMAIL}`}
+              className="block py-1 text-sm break-all text-charcoal underline-offset-4 hover:text-foreground hover:underline"
+            >
+              {SITE_EMAIL}
+            </a>
+            <a
+              href={SITE_INSTAGRAM}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="block py-1 text-sm text-charcoal underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Instagram
+            </a>
+            <div className="mt-4 grid">
+              {LEGAL_NAV_LINKS.map((link) => (
+                <FooterLink key={link.href} href={link.href}>
+                  {link.label}
+                </FooterLink>
+              ))}
+            </div>
+          </FooterColumn>
+        </div>
+
+        <p
+          aria-hidden
+          className="editorial mt-12 mb-6 overflow-hidden text-[clamp(3.4rem,15vw,14rem)] leading-[0.85] tracking-[-0.03em] whitespace-nowrap text-ink"
+        >
+          AB Collection
+        </p>
+
+        <div className="flex flex-wrap justify-between gap-3 border-t border-border pt-5 text-xs text-muted-foreground">
+          <span>© {new Date().getFullYear()} AB Collection · Made in India</span>
+          <span>
+            Designed and developed by{" "}
+            <a
+              href="https://hussainiitservices.com"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-foreground underline-offset-4 hover:underline"
+            >
+              Hussainiitservices.com
+            </a>
+          </span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function FooterColumn({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-4 text-[0.7rem] font-medium tracking-[0.2em] uppercase">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function FooterLink({
+  href,
+  onClick,
+  children,
+}: {
+  href: string;
+  onClick?: ((event: React.MouseEvent) => void) | undefined;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      {...(onClick ? { onClick } : {})}
+      className="block py-1 text-sm text-charcoal underline-offset-4 hover:text-foreground hover:underline"
+    >
+      {children}
+    </Link>
+  );
+}
+
+function Newsletter() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [done, setDone] = useState(false);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -37,7 +168,7 @@ export function SiteFooter() {
         return;
       }
       fbqTrack("Lead", { content_name: "Footer newsletter" });
-      toast.success("You're on the list.");
+      setDone(true);
       setEmail("");
     } catch {
       const nextError = "Could not subscribe. Please try again.";
@@ -49,119 +180,58 @@ export function SiteFooter() {
   };
 
   return (
-    <footer className="border-t border-border bg-sand px-5 py-16 sm:px-8 sm:py-20">
-      <div className="mx-auto max-w-4xl text-center">
-        <p className="font-display text-[2rem] font-bold tracking-tight sm:text-5xl">
-          AB Collection
-        </p>
-        <p className="mx-auto mt-4 max-w-md text-sm text-muted-foreground">
-          Premium everyday essentials. Shop the collection or get launch updates by email.
-        </p>
-
-        <form
-          onSubmit={handleSubmit}
-          aria-busy={loading}
-          className="mx-auto mt-8 flex max-w-lg flex-col gap-3 sm:flex-row"
+    <section
+      className="bg-ink py-[clamp(3.5rem,8vw,7rem)] text-center text-ink-foreground"
+      aria-labelledby="newsletter-heading"
+    >
+      <div className="page-wrap">
+        <p className="text-[0.72rem] tracking-[0.22em] text-[#bdb7ad] uppercase">The list</p>
+        <h2
+          id="newsletter-heading"
+          className="editorial mt-3 text-[clamp(2rem,4.5vw,3.8rem)] leading-none"
         >
-          <label htmlFor="footer-email" className="sr-only">
-            Email address
-          </label>
-          <Input
-            id="footer-email"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
-            className="h-12 flex-1 rounded-full border-border bg-background px-5"
-          />
-          <Button
-            type="submit"
-            disabled={loading}
-            className="h-12 w-full rounded-full bg-teal px-8 text-xs font-semibold tracking-[0.12em] text-teal-foreground uppercase hover:bg-teal/90 sm:w-auto"
+          Join the first wave.
+        </h2>
+        <p className="mx-auto mt-4 mb-7 max-w-[48ch] text-[#bdb7ad]">
+          New drops and restocks by email, before anyone else hears about them.
+        </p>
+        {done ? (
+          <p className="text-white" role="status">
+            You&apos;re on the list. Watch your inbox.
+          </p>
+        ) : (
+          <form
+            onSubmit={handleSubmit}
+            aria-busy={loading}
+            className="mx-auto flex max-w-[520px] border-b border-ink-foreground"
           >
-            {loading ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Subscribing…
-              </>
-            ) : (
-              "Subscribe"
-            )}
-          </Button>
-        </form>
-        <div className="mx-auto mt-3 max-w-lg">
+            <label htmlFor="footer-email" className="sr-only">
+              Email address
+            </label>
+            <input
+              id="footer-email"
+              type="email"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="Email address"
+              autoComplete="email"
+              className="min-h-12 min-w-0 flex-1 bg-transparent py-4 text-base font-light text-white outline-none placeholder:text-[#8f897f]"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex min-h-12 items-center gap-2 px-1.5 text-[0.74rem] tracking-[0.2em] text-white uppercase disabled:opacity-60"
+            >
+              {loading ? <Loader2 className="size-4 animate-spin" /> : null}
+              Subscribe →
+            </button>
+          </form>
+        )}
+        <div className="mx-auto mt-3 max-w-[520px]">
           <FormAlert error={error} />
         </div>
-
-        <nav
-          className="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground"
-          aria-label="Footer"
-        >
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="transition-colors hover:text-foreground"
-            >
-              {link.label}
-            </Link>
-          ))}
-          <Link href="/track-order" className="transition-colors hover:text-foreground">
-            Track Your Order
-          </Link>
-          <Link href="/account" className="transition-colors hover:text-foreground">
-            My Account
-          </Link>
-          <Link href="/wholesale" className="transition-colors hover:text-foreground">
-            Wholesale
-          </Link>
-          <a
-            href={`mailto:${SITE_EMAIL}`}
-            className="inline-flex items-center gap-2 transition-colors hover:text-foreground"
-          >
-            <Mail className="size-3.5" /> Email
-          </a>
-          <a
-            href={SITE_INSTAGRAM}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="inline-flex items-center gap-2 transition-colors hover:text-foreground"
-          >
-            <Instagram className="size-3.5" /> Instagram
-          </a>
-        </nav>
-
-        <nav
-          className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground"
-          aria-label="Legal"
-        >
-          {LEGAL_NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="transition-colors hover:text-foreground"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
-        <p className="mt-10 text-xs tracking-[0.12em] text-muted-foreground uppercase">
-          © {new Date().getFullYear()} AB Collection · Made in India
-        </p>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Designed and developed by{" "}
-          <a
-            href="https://hussainiitservices.com"
-            target="_blank"
-            rel="noreferrer noopener"
-            className="font-medium text-foreground underline-offset-4 transition-colors hover:text-teal hover:underline"
-          >
-            Hussainiitservices.com
-          </a>
-        </p>
       </div>
-    </footer>
+    </section>
   );
 }

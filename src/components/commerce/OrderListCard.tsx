@@ -17,7 +17,7 @@ export function OrderListCard({ order }: { order: Order }) {
   const href = `/account/orders/${encodeURIComponent(order.orderNumber)}`;
 
   return (
-    <article className="rounded-3xl border border-border p-5">
+    <article className="border border-border p-5">
       <div className="flex gap-4">
         {first?.productImage ? (
           <ProductImage
@@ -26,13 +26,13 @@ export function OrderListCard({ order }: { order: Order }) {
             width={160}
             height={160}
             sizes="80px"
-            className="size-20 shrink-0 rounded-2xl object-cover object-top"
+            className="size-20 shrink-0 object-cover object-top"
           />
         ) : null}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="break-all font-display text-xl font-bold">#{order.orderNumber}</p>
+              <p className="break-all font-display text-xl font-normal">#{order.orderNumber}</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {formatOrderDate(order.createdAt)}
               </p>
@@ -60,14 +60,14 @@ export function OrderListCard({ order }: { order: Order }) {
             <Button
               asChild
               variant="outline"
-              className="h-10 rounded-full px-5 text-xs font-semibold tracking-[0.12em] uppercase"
+              className="h-10 px-5 text-xs font-semibold tracking-[0.12em] uppercase"
             >
               <Link href={href}>View Order</Link>
             </Button>
             {trackable ? (
               <Button
                 asChild
-                className="h-10 rounded-full bg-teal px-5 text-xs font-semibold tracking-[0.12em] text-teal-foreground uppercase"
+                className="h-10 bg-teal px-5 text-xs font-semibold tracking-[0.12em] text-teal-foreground uppercase"
               >
                 <Link href={href}>Track Order</Link>
               </Button>

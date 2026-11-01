@@ -11,7 +11,11 @@ const confirmSchema = z.object({
   cashfreeOrderId: z.string().trim().min(3).max(50),
 });
 
-/** Marks the reserved checkout order paid after Cashfree, even if the browser lost the draft. */
+/**
+ * Marks the reserved checkout order paid after Cashfree, even if the browser lost the draft.
+ * Safe to call repeatedly: the webhook and page refreshes only ever mark the order paid once.
+ * Responds with `status: "paid" | "pending" | "failed"` so the return page can wait for UPI.
+ */
 export async function POST(request: Request) {
   try {
     const body = confirmSchema.parse(await request.json());
@@ -23,10 +27,17 @@ export async function POST(request: Request) {
       });
     }
     return NextResponse.json({
+      status: order.paymentStatus === "paid" ? "paid" : "pending",
       orderNumber: order.orderNumber,
-      paid: order.paymentStatus === "paid",
     });
   } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "payment_pending" || code === "payment_failed") {
+      return NextResponse.json({
+        status: code === "payment_pending" ? "pending" : "failed",
+        error: (error as Error).message,
+      });
+    }
     const { status, message } = actionErrorMessage(error, "Could not confirm payment.");
     return NextResponse.json({ error: message }, { status });
   }

@@ -9,6 +9,7 @@ import {
 } from "@/lib/commerce.server";
 import { checkoutSchema } from "@/lib/commerce-types";
 import { getCustomerSession } from "@/lib/customer-auth.server";
+import { getCheckoutCustomer } from "@/lib/guest-checkout.server";
 import { actionErrorMessage } from "@/lib/form-request";
 import { notifyOrderEvent } from "@/lib/notifications.server";
 import { isListedOrder } from "@/lib/order-tracking";
@@ -27,10 +28,28 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await getCustomerSession();
+    const session = await getCheckoutCustomer();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const body = checkoutSchema.parse(await request.json());
     const quote = await quoteCheckout(session, body);
+    // Membership expiry or a price change since the shopper last saw the total:
+    // stop and let them confirm the new amount before paying.
+    // Never applies once Cashfree has the payment; paid orders are confirmed as charged.
+    if (
+      !body.cashfreeOrderId &&
+      body.expectedTotal !== undefined &&
+      body.expectedTotal !== quote.totalAmount
+    ) {
+      return NextResponse.json(
+        {
+          error: `Your total changed to ₹${quote.totalAmount.toLocaleString("en-IN")}. Please review it before paying.`,
+          code: "price_changed",
+          totalAmount: quote.totalAmount,
+          memberDiscount: quote.memberDiscount,
+        },
+        { status: 409 },
+      );
+    }
     const cashfree = getCashfreeConfig();
 
     if (quote.totalAmount > 0) {

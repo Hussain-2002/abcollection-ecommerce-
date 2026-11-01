@@ -1,7 +1,8 @@
 import { after, NextResponse } from "next/server";
 
-import { verifyCashfreeWebhook } from "@/lib/cashfree.server";
+import { isMembershipGatewayOrder, verifyCashfreeWebhook } from "@/lib/cashfree.server";
 import { confirmCashfreeCheckout } from "@/lib/commerce.server";
+import { confirmMembershipPayment, notifyActivated } from "@/lib/membership.server";
 import { notifyOrderEvent } from "@/lib/notifications.server";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,23 @@ export async function POST(request: Request) {
     payload.type === "PAYMENT_SUCCESS_WEBHOOK";
   if (!succeeded || !cashfreeOrderId) {
     return NextResponse.json({ ok: true, ignored: true });
+  }
+
+  // AB Insider fees use their own order ids; activation happens once, after verification.
+  if (isMembershipGatewayOrder(cashfreeOrderId)) {
+    try {
+      const { membership, justActivated } = await confirmMembershipPayment(cashfreeOrderId);
+      if (justActivated) after(() => notifyActivated(membership));
+      return NextResponse.json({ ok: true, membership: membership.membershipNumber });
+    } catch (error) {
+      const status = (error as { status?: number }).status;
+      if (status === 404) return NextResponse.json({ ok: true, ignored: true });
+      console.error("[cashfree-webhook] membership", error);
+      return NextResponse.json(
+        { error: "Could not record the membership payment." },
+        { status: 500 },
+      );
+    }
   }
 
   try {

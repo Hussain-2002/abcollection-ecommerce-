@@ -11,6 +11,8 @@ import {
   type NotificationEventType,
   type OrderNotification,
 } from "@/lib/notifications";
+import { renderOrderEmailHtml, renderStoreInquiryHtml } from "@/lib/email-templates";
+import { isPlaceholderEmail } from "@/lib/guest-email";
 import { SITE_EMAIL, SITE_NAME, SITE_URL } from "@/lib/site";
 import { getSupabaseWriteClient } from "@/lib/supabase-catalog.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -277,9 +279,16 @@ export async function notifyOrderEvent(order: Order, eventType: NotificationEven
     try {
       const slot = await claimSlot(order, eventType, channel);
       if (!slot) continue;
+      // Guests who skipped email have a placeholder address that can't receive mail.
+      if (channel === "email" && isPlaceholderEmail(order.customerEmail)) continue;
       const result =
         channel === "email"
-          ? await sendEmail(order.customerEmail, message.subject, message.text, message.html)
+          ? await sendEmail(
+              order.customerEmail,
+              message.subject,
+              message.text,
+              renderOrderEmailHtml(eventType, order),
+            )
           : await sendWhatsApp(order.customerPhone, message.text);
       await markResult(slot.id, {
         status: result.ok ? "sent" : "failed",
@@ -299,11 +308,7 @@ export async function notifyStoreInquiry(input: {
   replyTo?: string;
 }) {
   const text = [`${SITE_NAME} website inquiry (${input.type})`, "", ...input.lines].join("\n");
-  const html = `<p style="font-family:Inter,Arial,sans-serif;white-space:pre-wrap">${text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll("\n", "<br/>")}</p>`;
+  const html = renderStoreInquiryHtml(input);
   const result = input.replyTo?.trim()
     ? await sendEmail(SITE_EMAIL, input.subject, text, html, input.replyTo.trim())
     : await sendEmail(SITE_EMAIL, input.subject, text, html);

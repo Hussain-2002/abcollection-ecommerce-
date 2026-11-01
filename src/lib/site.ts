@@ -16,14 +16,6 @@ export const SITE_EMAIL = "abcollection.co.in@gmail.com";
 export const SITE_INSTAGRAM = "https://instagram.com/abcollection.co.in";
 export const SITE_LOCALE = "en_IN";
 
-export const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/collection", label: "Collection" },
-  { href: "/about", label: "About" },
-  { href: "/faq", label: "FAQ" },
-  { href: "/contact", label: "Contact" },
-] as const;
-
 export const FAQS = [
   {
     question: "Can I order now?",

@@ -186,6 +186,22 @@ export async function getReviewSummary(productId: string): Promise<ReviewSummary
   };
 }
 
+/** Newest approved reviews across the catalogue, for the home page. */
+export async function listLatestPublicReviews(limit = 12) {
+  const approved = (await listStored()).filter(
+    (row) => row.status === "approved" && !row.deletedAt,
+  );
+  const ratings = approved.map((row) => row.rating);
+  return {
+    summary: {
+      average: averageRating(ratings),
+      count: approved.length,
+      distribution: ratingDistribution(ratings),
+    } satisfies ReviewSummary,
+    reviews: approved.slice(0, limit).map(toPublic),
+  };
+}
+
 export async function listPublicReviews(
   productId: string,
   page = 1,

@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock, RefreshCw, Truck } from "lucide-react";
 
 import { useCommerce } from "@/components/commerce/CommerceProvider";
+import { useMemberPricing } from "@/components/membership/MembershipProvider";
 import { OrderProcessingScreen } from "@/components/commerce/OrderProcessingScreen";
-import { OrderPlaced } from "@/components/commerce/OrderPlaced";
 import { useIstefadaOffer } from "@/components/site/IstefadaOfferProvider";
 import { useCatalog } from "@/components/site/CatalogProvider";
 import { Button } from "@/components/ui/button";
@@ -65,6 +65,32 @@ function addressAlert(errors: Partial<Record<AddressField, string>>) {
   return `Please fill in your ${missing.slice(0, -1).join(", ")} and ${last}.`;
 }
 
+const GUEST_CONTACT_KEY = "ab_guest_contact";
+type GuestField = "fullName" | "phone" | "email";
+
+function guestFieldErrors(values: Record<GuestField, string>) {
+  const errors: Partial<Record<GuestField, string>> = {};
+  if (values.fullName.trim().length < 2) errors.fullName = "Please enter your full name.";
+  if (!/^(\+?91)?[6-9]\d{9}$/.test(values.phone.replace(/[\s-]/g, ""))) {
+    errors.phone = "Enter a 10-digit mobile number.";
+  }
+  if (values.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) {
+    errors.email = "Enter a valid email, or leave it blank.";
+  }
+  return errors;
+}
+
+function StepTitle({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <h2 className="flex items-center gap-3 text-[0.78rem] font-medium tracking-[0.18em] uppercase">
+      <span className="grid size-6 place-items-center rounded-full bg-ink text-[0.66rem] tracking-normal text-white">
+        {n}
+      </span>
+      {children}
+    </h2>
+  );
+}
+
 function FieldAlert({ message }: { message?: string | undefined }) {
   if (!message) return null;
   return (
@@ -97,9 +123,12 @@ export default function CheckoutClient() {
   const [submitting, setSubmitting] = useState(false);
   const [paying, setPaying] = useState(false);
   const [placing, setPlacing] = useState(false);
-  const [confirmed, setConfirmed] = useState<{ orderNumber: string; paid: boolean } | null>(null);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<AddressField, string>>>({});
+  const [guestName, setGuestName] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestErrors, setGuestErrors] = useState<Partial<Record<GuestField, string>>>({});
   const [issues, setIssues] = useState<CartIssue[]>([]);
   const [couponInput, setCouponInput] = useState("");
   const [couponQuote, setCouponQuote] = useState<{
@@ -109,12 +138,16 @@ export default function CheckoutClient() {
     error?: string;
   } | null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
+  const [couponOpen, setCouponOpen] = useState(false);
   const [bundles, setBundles] = useState<BundleOfferView[]>([]);
   const [serverQuote, setServerQuote] = useState<{
     totalAmount: number;
     couponDiscount: number;
     bundleDiscount: number;
+    memberDiscount: number;
   } | null>(null);
+  /** Server total the shopper must confirm after a price change (e.g. membership expired). */
+  const [priceNotice, setPriceNotice] = useState<{ total: number } | null>(null);
   const checkoutIdRef = useRef(
     typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : "",
   );
@@ -133,10 +166,28 @@ export default function CheckoutClient() {
 
   useEffect(() => {
     router.prefetch("/checkout/success");
+    router.prefetch("/checkout/return");
     const mode =
       process.env["NEXT_PUBLIC_CASHFREE_MODE"] === "production" ? "production" : "sandbox";
     void loadCashfreeCheckout(mode).catch(() => undefined);
   }, [router]);
+
+  useEffect(() => {
+    if (customer) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem(GUEST_CONTACT_KEY) || "null") as {
+        fullName?: string;
+        phone?: string;
+        email?: string;
+      } | null;
+      if (!saved) return;
+      setGuestName((value) => value || saved.fullName || "");
+      setGuestPhone((value) => value || saved.phone || "");
+      setGuestEmail((value) => value || saved.email || "");
+    } catch {
+      // Ignore a corrupt saved contact.
+    }
+  }, [customer]);
 
   useEffect(() => {
     if (!customer) return;
@@ -177,15 +228,27 @@ export default function CheckoutClient() {
   }, [mode, buyNow, customer, cart, guestCart, products]);
 
   const subtotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
-  const istefadaDiscount = hasOffer ? resolveIstefadaDiscount(promoCode, lines) : 0;
+  // AB Insider prices for display; the server quote below is the real total.
+  const member = useMemberPricing(lines);
+  const istefadaDiscount = hasOffer ? resolveIstefadaDiscount(promoCode, member.offerLines) : 0;
   const previewDiscount = couponQuote?.ok ? couponQuote.discount : istefadaDiscount;
   const previewCode = couponQuote?.ok ? couponQuote.code : hasOffer ? promoCode : "";
-  const appliedBundle = bestQualifyingBundle(bundles, lines);
+  const appliedBundle = bestQualifyingBundle(bundles, member.bundleLines);
   const bundleSavings = serverQuote?.bundleDiscount ?? appliedBundle?.savings ?? 0;
   const couponSavings = serverQuote?.couponDiscount ?? previewDiscount;
+  const memberSavings = serverQuote?.memberDiscount ?? member.memberSavings;
   const total =
     serverQuote?.totalAmount ??
-    Math.max(0, subtotal - previewDiscount - (appliedBundle?.savings ?? 0));
+    Math.max(0, subtotal - member.memberSavings - previewDiscount - (appliedBundle?.savings ?? 0));
+
+  const payLabel = priceNotice
+    ? `Confirm & pay ${formatInr(priceNotice.total)}`
+    : `Pay ${formatInr(total)}`;
+
+  // Any change to the cart or code means the shopper is looking at a fresh total.
+  useEffect(() => {
+    setPriceNotice(null);
+  }, [lines, couponInput, couponQuote]);
 
   useEffect(() => {
     if (!customer || lines.length === 0) {
@@ -212,13 +275,19 @@ export default function CheckoutClient() {
         .then((res) => (res.ok ? res.json() : null))
         .then(
           (
-            data: { totalAmount?: number; couponDiscount?: number; bundleDiscount?: number } | null,
+            data: {
+              totalAmount?: number;
+              couponDiscount?: number;
+              bundleDiscount?: number;
+              memberDiscount?: number;
+            } | null,
           ) => {
             if (cancelled || !data || typeof data.totalAmount !== "number") return;
             setServerQuote({
               totalAmount: data.totalAmount,
               couponDiscount: data.couponDiscount ?? 0,
               bundleDiscount: data.bundleDiscount ?? 0,
+              memberDiscount: data.memberDiscount ?? 0,
             });
           },
         )
@@ -245,8 +314,7 @@ export default function CheckoutClient() {
     });
   }, [loading, lines, total]);
 
-  const showPay =
-    Boolean(customer) && lines.length > 0 && !confirmed && !loading && !(submitting && !paying);
+  const showPay = lines.length > 0 && !loading && !(submitting && !paying);
   const payInView = useInView(payRef, showPay);
 
   const applyCoupon = async () => {
@@ -293,6 +361,15 @@ export default function CheckoutClient() {
     }
   };
 
+  const clearGuestError = (field: GuestField) => {
+    setGuestErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  };
+
   const clearFieldError = (field: AddressField) => {
     setFieldErrors((current) => {
       if (!current[field]) return current;
@@ -304,7 +381,26 @@ export default function CheckoutClient() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!customer || submittingRef.current) return;
+    if (loading || submittingRef.current) return;
+    if (!customer) {
+      const nextGuestErrors = guestFieldErrors({
+        fullName: guestName,
+        phone: guestPhone,
+        email: guestEmail,
+      });
+      const firstGuestInvalid = (["fullName", "phone", "email"] as const).find(
+        (field) => nextGuestErrors[field],
+      );
+      if (firstGuestInvalid) {
+        setGuestErrors(nextGuestErrors);
+        setError("Please check your contact details.");
+        const field = document.getElementById(`guest-${firstGuestInvalid}`);
+        field?.focus();
+        field?.scrollIntoView({ block: "center", behavior: "smooth" });
+        return;
+      }
+      setGuestErrors({});
+    }
     if (useNewAddress || !selectedAddressId) {
       const nextErrors = addressFieldErrors({ label, line1, city, state, pincode });
       const firstInvalid = ADDRESS_FIELDS.find((field) => nextErrors[field]);
@@ -347,6 +443,7 @@ export default function CheckoutClient() {
               alternatePhone,
               ...(submittedPromo ? { promoCode: submittedPromo } : {}),
               ...(checkoutId ? { checkoutId } : {}),
+              expectedTotal: priceNotice?.total ?? total,
               address: {
                 label: label.trim(),
                 line1,
@@ -364,7 +461,30 @@ export default function CheckoutClient() {
               addressId: selectedAddressId,
               ...(submittedPromo ? { promoCode: submittedPromo } : {}),
               ...(checkoutId ? { checkoutId } : {}),
+              expectedTotal: priceNotice?.total ?? total,
             };
+
+      if (!customer) {
+        const contact = {
+          fullName: guestName.trim(),
+          phone: guestPhone.trim(),
+          email: guestEmail.trim(),
+        };
+        localStorage.setItem(GUEST_CONTACT_KEY, JSON.stringify(contact));
+        const guestRes = await fetch("/api/checkout/guest", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...contact,
+            items: mode === "cart" ? guestCart : [],
+          }),
+        });
+        if (!guestRes.ok) {
+          const guestData = await readJsonBody<{ error?: string }>(guestRes);
+          setError(apiErrorMessage(guestData, "Could not save your details. Please try again."));
+          return;
+        }
+      }
 
       sessionStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify(payload));
 
@@ -381,7 +501,19 @@ export default function CheckoutClient() {
         checkoutId?: string;
         mode?: "sandbox" | "production";
         error?: string;
+        code?: string;
+        totalAmount?: number;
       }>(payRes);
+      if (
+        payRes.status === 409 &&
+        payData.code === "price_changed" &&
+        typeof payData.totalAmount === "number"
+      ) {
+        // Show the new total and wait for the shopper to confirm it.
+        setPriceNotice({ total: payData.totalAmount });
+        setError("");
+        return;
+      }
       if (!payRes.ok) {
         setError(apiErrorMessage(payData, "Could not start payment. Your cart is unchanged."));
         return;
@@ -394,11 +526,11 @@ export default function CheckoutClient() {
         );
       }
 
-      const place = async (cashfreeOrderId?: string) => {
+      const place = async () => {
         const res = await fetch("/api/orders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...payload, ...(cashfreeOrderId ? { cashfreeOrderId } : {}) }),
+          body: JSON.stringify(payload),
         });
         const data = await readJsonBody<{ order?: Order; error?: string }>(res);
         if (!res.ok || !data.order) {
@@ -411,15 +543,18 @@ export default function CheckoutClient() {
           );
         }
         setPlacing(true);
-        const paid = data.order.paymentStatus === "paid";
-        setConfirmed({ orderNumber: data.order.orderNumber, paid });
         fbqTrackPurchase(data.order);
         sessionStorage.removeItem(BUY_NOW_KEY);
         sessionStorage.removeItem(CHECKOUT_DRAFT_KEY);
-        router.replace(
-          `/checkout/success?order=${encodeURIComponent(data.order.orderNumber)}${paid ? "&paid=1" : ""}`,
-        );
         void applySuccessfulOrder(data.order, mode);
+        router.replace(`/checkout/success?order=${encodeURIComponent(data.order.orderNumber)}`);
+      };
+
+      // The return page verifies the payment with Cashfree, waits for slow UPI
+      // confirmations and then opens the order confirmation page.
+      const confirmPayment = (cashfreeOrderId: string) => {
+        setPlacing(true);
+        router.replace(`/checkout/return?order_id=${encodeURIComponent(cashfreeOrderId)}`);
       };
 
       if (payData.skipPayment) {
@@ -429,7 +564,7 @@ export default function CheckoutClient() {
       }
 
       if (payData.alreadyPaid && payData.cashfreeOrderId) {
-        await place(payData.cashfreeOrderId);
+        confirmPayment(payData.cashfreeOrderId);
         placed = true;
         return;
       }
@@ -460,8 +595,7 @@ export default function CheckoutClient() {
         setError("Payment was cancelled.");
         return;
       }
-      setPlacing(true);
-      await place(payData.cashfreeOrderId);
+      confirmPayment(payData.cashfreeOrderId);
       placed = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -475,17 +609,13 @@ export default function CheckoutClient() {
     }
   };
 
-  if (confirmed) {
-    return <OrderPlaced orderNumber={confirmed.orderNumber} paid={confirmed.paid} />;
-  }
-
   if (submitting && !paying) {
     return (
       <OrderProcessingScreen
         title={placing ? "Placing your order" : "Opening secure payment"}
         subtitle={
           placing
-            ? "Payment received. Confirming your order."
+            ? "Confirming your payment and order."
             : "Please wait — Cashfree checkout is starting."
         }
       />
@@ -500,36 +630,13 @@ export default function CheckoutClient() {
     );
   }
 
-  if (!customer) {
-    return (
-      <div className="mx-auto max-w-lg px-5 py-20 text-center">
-        <h1 className="font-display text-3xl font-bold">Sign in to checkout</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Create an account or log in to place your order.
-        </p>
-        <Button
-          onClick={() => {
-            if (mode === "buy_now" && buyNow) {
-              openAuth({ type: "buy_now", item: buyNow, redirect: "/checkout?mode=buy_now" });
-            } else {
-              openAuth({ type: "checkout" });
-            }
-          }}
-          className="mt-6 h-11 rounded-full bg-teal px-8 text-xs tracking-[0.12em] text-teal-foreground uppercase"
-        >
-          Login / Signup
-        </Button>
-      </div>
-    );
-  }
-
   if (!lines.length) {
     return (
       <div className="mx-auto max-w-lg px-5 py-20 text-center">
-        <h1 className="font-display text-3xl font-bold">Nothing to checkout</h1>
+        <h1 className="font-display text-3xl font-normal">Nothing to checkout</h1>
         <Button
           asChild
-          className="mt-6 h-11 rounded-full bg-teal px-8 text-xs tracking-[0.12em] text-teal-foreground uppercase"
+          className="mt-6 h-11 bg-teal px-8 text-xs tracking-[0.12em] text-teal-foreground uppercase"
         >
           <Link href="/collection">Browse Collection</Link>
         </Button>
@@ -538,86 +645,242 @@ export default function CheckoutClient() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-5 py-12 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-8 sm:py-16 lg:pb-16">
-      <h1 className="font-display text-[2.15rem] font-bold tracking-tight sm:text-5xl">Checkout</h1>
-      <p className="mt-3 text-sm text-muted-foreground">
-        Confirm your details, then pay securely with Cashfree.
-      </p>
+    <div className="page-wrap max-w-6xl py-[clamp(2rem,5vw,3.5rem)] pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:pb-16">
+      <nav
+        aria-label="Checkout steps"
+        className="flex items-center gap-2 text-[0.68rem] tracking-[0.16em] uppercase"
+      >
+        <button
+          type="button"
+          onClick={openCart}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          Bag
+        </button>
+        <span aria-hidden className="text-muted-foreground">
+          /
+        </span>
+        <span aria-current="step">Details</span>
+        <span aria-hidden className="text-muted-foreground">
+          /
+        </span>
+        <span className="text-muted-foreground">Payment</span>
+      </nav>
+      <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
+        <h1 className="editorial text-[clamp(2.4rem,6vw,3.6rem)] leading-none">Checkout</h1>
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Lock className="size-4" strokeWidth={1.4} aria-hidden />
+          Secure payment with Cashfree
+        </p>
+      </div>
 
       <form
         onSubmit={submit}
         noValidate
         aria-busy={submitting}
-        className="mt-10 grid min-w-0 gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]"
+        className="mt-8 grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)] lg:gap-12"
       >
-        <div className="min-w-0 space-y-8">
-          <section className="min-w-0 rounded-3xl border border-border p-4 sm:p-6">
-            <h2 className="font-display text-2xl font-bold">Customer details</h2>
-            <dl className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between gap-4">
-                <dt className="shrink-0 text-muted-foreground">Name</dt>
-                <dd className="min-w-0 break-words text-right font-medium">{customer.fullName}</dd>
+        <div className="min-w-0 space-y-4">
+          {!customer ? (
+            <section className="min-w-0 border border-border bg-paper p-5 sm:p-7">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <StepTitle n={1}>Contact</StepTitle>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Checking out as a guest. No account needed.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    mode === "buy_now" && buyNow
+                      ? openAuth({
+                          type: "buy_now",
+                          item: buyNow,
+                          redirect: "/checkout?mode=buy_now",
+                        })
+                      : openAuth({ type: "checkout" })
+                  }
+                  className="min-h-11 text-[0.72rem] tracking-[0.16em] underline underline-offset-4 uppercase"
+                >
+                  Have an account? Log in
+                </button>
               </div>
-              <div className="flex justify-between gap-4">
-                <dt className="shrink-0 text-muted-foreground">Email</dt>
-                <dd className="min-w-0 break-all text-right font-medium">{customer.email}</dd>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <Label htmlFor="guest-fullName">Full name</Label>
+                  <Input
+                    id="guest-fullName"
+                    autoComplete="name"
+                    required
+                    value={guestName}
+                    aria-invalid={Boolean(guestErrors.fullName)}
+                    onChange={(e) => {
+                      setGuestName(e.target.value);
+                      clearGuestError("fullName");
+                    }}
+                    className={cn("mt-1.5 h-11", guestErrors.fullName && "border-destructive")}
+                  />
+                  <FieldAlert message={guestErrors.fullName} />
+                </div>
+                <div>
+                  <Label htmlFor="guest-phone">Mobile number</Label>
+                  <Input
+                    id="guest-phone"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel-national"
+                    required
+                    value={guestPhone}
+                    aria-invalid={Boolean(guestErrors.phone)}
+                    onChange={(e) => {
+                      setGuestPhone(e.target.value);
+                      clearGuestError("phone");
+                    }}
+                    placeholder="10-digit mobile"
+                    className={cn("mt-1.5 h-11", guestErrors.phone && "border-destructive")}
+                  />
+                  <FieldAlert message={guestErrors.phone} />
+                </div>
+                <div>
+                  <Label htmlFor="guest-email">Email (optional)</Label>
+                  <Input
+                    id="guest-email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={guestEmail}
+                    aria-invalid={Boolean(guestErrors.email)}
+                    onChange={(e) => {
+                      setGuestEmail(e.target.value);
+                      clearGuestError("email");
+                    }}
+                    placeholder="For your order confirmation"
+                    className={cn("mt-1.5 h-11", guestErrors.email && "border-destructive")}
+                  />
+                  <FieldAlert message={guestErrors.email} />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label htmlFor="alt-phone">Alternate contact number (optional)</Label>
+                  <Input
+                    id="alt-phone"
+                    value={alternatePhone}
+                    onChange={(e) => setAlternatePhone(e.target.value)}
+                    className="mt-1.5 h-11"
+                    placeholder="Optional"
+                  />
+                </div>
               </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Primary phone</dt>
-                <dd className="font-medium">{customer.phone}</dd>
+              <div className="mt-5 flex items-start gap-3 border-t border-border pt-4 text-sm text-muted-foreground">
+                <span aria-hidden className="mt-0.5 text-foreground">
+                  ✦
+                </span>
+                <p>
+                  Want to track every order in one place?{" "}
+                  <button
+                    type="button"
+                    onClick={() => openAuth({ type: "checkout" })}
+                    className="text-foreground underline underline-offset-4"
+                  >
+                    Create an account
+                  </button>{" "}
+                  — it&apos;s optional. You can still track this order with your order number.
+                </p>
               </div>
-            </dl>
-            <div className="mt-5">
-              <Label htmlFor="alt-phone">Alternate contact number (optional)</Label>
-              <Input
-                id="alt-phone"
-                value={alternatePhone}
-                onChange={(e) => setAlternatePhone(e.target.value)}
-                className="mt-1.5 h-11 rounded-full"
-                placeholder="Optional"
-              />
-            </div>
-          </section>
+            </section>
+          ) : (
+            <section className="min-w-0 border border-border bg-paper p-5 sm:p-7">
+              <div className="flex items-start justify-between gap-3">
+                <StepTitle n={1}>Contact</StepTitle>
+                <Link
+                  href="/account/settings"
+                  className="text-[0.72rem] tracking-[0.14em] text-muted-foreground uppercase underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  Edit
+                </Link>
+              </div>
+              <div className="mt-4 text-sm">
+                <p className="font-medium">{customer.fullName}</p>
+                <p className="mt-0.5 break-all text-muted-foreground">
+                  {customer.email} · {customer.phone}
+                </p>
+              </div>
+              <div className="mt-5">
+                <Label htmlFor="alt-phone">Alternate contact number (optional)</Label>
+                <Input
+                  id="alt-phone"
+                  value={alternatePhone}
+                  onChange={(e) => setAlternatePhone(e.target.value)}
+                  className="mt-1.5"
+                  inputMode="tel"
+                  placeholder="In case we can't reach you"
+                />
+              </div>
+            </section>
+          )}
 
-          <section className="min-w-0 rounded-3xl border border-border p-4 sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-2xl font-bold">Delivery address</h2>
+          <section className="min-w-0 border border-border bg-paper p-5 sm:p-7">
+            <div className="flex items-start justify-between gap-3">
+              <StepTitle n={2}>Delivery</StepTitle>
               {addresses.length ? (
                 <button
                   type="button"
-                  className="inline-flex min-h-11 items-center text-xs font-semibold tracking-[0.1em] text-teal uppercase"
+                  className="text-[0.72rem] tracking-[0.14em] text-muted-foreground uppercase underline-offset-4 hover:text-foreground hover:underline"
                   onClick={() => setUseNewAddress((v) => !v)}
                 >
-                  {useNewAddress ? "Use saved" : "New address"}
+                  {useNewAddress ? "Use a saved address" : "+ New address"}
                 </button>
               ) : null}
             </div>
 
             {!useNewAddress && addresses.length ? (
-              <div className="mt-4 space-y-3">
-                {addresses.map((address) => (
-                  <label
-                    key={address.id}
-                    className={`block cursor-pointer rounded-2xl border p-4 text-sm ${
-                      selectedAddressId === address.id ? "border-foreground" : "border-border"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      className="sr-only"
-                      checked={selectedAddressId === address.id}
-                      onChange={() => setSelectedAddressId(address.id)}
-                    />
-                    <p className="font-semibold">{address.label}</p>
-                    <p className="mt-1 text-muted-foreground">
-                      {address.line1}
-                      {address.line2 ? `, ${address.line2}` : ""}
-                    </p>
-                    <p className="text-muted-foreground">
-                      {address.city}, {address.state} {address.pincode}
-                    </p>
-                  </label>
-                ))}
+              <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+                {addresses.map((address) => {
+                  const selected = selectedAddressId === address.id;
+                  return (
+                    <label
+                      key={address.id}
+                      className={cn(
+                        "flex cursor-pointer gap-3 border p-4 text-sm transition-colors duration-200",
+                        selected
+                          ? "border-ink bg-background"
+                          : "border-border hover:border-foreground/40",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="saved-address"
+                        className="sr-only"
+                        checked={selected}
+                        onChange={() => setSelectedAddressId(address.id)}
+                      />
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
+                          selected ? "border-ink" : "border-input",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "size-2 rounded-full bg-ink transition-transform duration-200",
+                            selected ? "scale-100" : "scale-0",
+                          )}
+                        />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block font-medium">{address.label}</span>
+                        <span className="mt-1 block text-muted-foreground">
+                          {address.line1}
+                          {address.line2 ? `, ${address.line2}` : ""}
+                        </span>
+                        <span className="block text-muted-foreground">
+                          {address.city}, {address.state} {address.pincode}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             ) : (
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -638,7 +901,7 @@ export default function CheckoutClient() {
                       clearFieldError("label");
                     }}
                     placeholder="Home"
-                    className={`mt-1.5 h-11 rounded-full ${fieldErrors.label ? "border-destructive" : ""}`}
+                    className={`mt-1.5 h-11 ${fieldErrors.label ? "border-destructive" : ""}`}
                   />
                   <FieldAlert message={fieldErrors.label} />
                 </div>
@@ -653,7 +916,7 @@ export default function CheckoutClient() {
                       setLine1(e.target.value);
                       clearFieldError("line1");
                     }}
-                    className={`mt-1.5 h-11 rounded-full ${fieldErrors.line1 ? "border-destructive" : ""}`}
+                    className={`mt-1.5 h-11 ${fieldErrors.line1 ? "border-destructive" : ""}`}
                   />
                   <FieldAlert message={fieldErrors.line1} />
                 </div>
@@ -663,7 +926,7 @@ export default function CheckoutClient() {
                     id="line2"
                     value={line2}
                     onChange={(e) => setLine2(e.target.value)}
-                    className="mt-1.5 h-11 rounded-full"
+                    className="mt-1.5 h-11"
                   />
                 </div>
                 <div>
@@ -677,7 +940,7 @@ export default function CheckoutClient() {
                       setCity(e.target.value);
                       clearFieldError("city");
                     }}
-                    className={`mt-1.5 h-11 rounded-full ${fieldErrors.city ? "border-destructive" : ""}`}
+                    className={`mt-1.5 h-11 ${fieldErrors.city ? "border-destructive" : ""}`}
                   />
                   <FieldAlert message={fieldErrors.city} />
                 </div>
@@ -692,7 +955,7 @@ export default function CheckoutClient() {
                       setState(e.target.value);
                       clearFieldError("state");
                     }}
-                    className={`mt-1.5 h-11 rounded-full ${fieldErrors.state ? "border-destructive" : ""}`}
+                    className={`mt-1.5 h-11 ${fieldErrors.state ? "border-destructive" : ""}`}
                   />
                   <FieldAlert message={fieldErrors.state} />
                 </div>
@@ -708,32 +971,71 @@ export default function CheckoutClient() {
                       setPincode(e.target.value);
                       clearFieldError("pincode");
                     }}
-                    className={`mt-1.5 h-11 rounded-full ${fieldErrors.pincode ? "border-destructive" : ""}`}
+                    className={`mt-1.5 h-11 ${fieldErrors.pincode ? "border-destructive" : ""}`}
                   />
                   <FieldAlert message={fieldErrors.pincode} />
                 </div>
               </div>
             )}
           </section>
+
+          <section className="min-w-0 border border-border bg-paper p-5 sm:p-7">
+            <StepTitle n={3}>Payment</StepTitle>
+            <div className="mt-4 flex items-start gap-3 text-sm">
+              <Lock className="mt-0.5 size-4 shrink-0" strokeWidth={1.4} aria-hidden />
+              <p className="text-muted-foreground">
+                Pay by <span className="text-foreground">UPI, card or netbanking</span> in
+                Cashfree&apos;s secure window. Your order is confirmed and stock is held only once
+                payment succeeds.
+              </p>
+            </div>
+          </section>
         </div>
 
-        <aside className="h-fit min-w-0 rounded-3xl border border-border bg-sand p-4 sm:p-6 lg:sticky lg:top-24">
-          <h2 className="font-display text-2xl font-bold">Order</h2>
-          <ul className="mt-4 space-y-4">
-            {lines.map((line) => (
-              <li key={line.key} className="flex gap-3 text-sm">
-                <img
-                  src={cdnImageUrl(line.image)}
-                  alt=""
-                  className="size-16 rounded-xl object-cover object-top"
-                />
+        <aside className="h-fit min-w-0 border border-border bg-paper p-5 sm:p-7 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)]">
+          <h2 className="flex items-baseline justify-between gap-3">
+            <span className="text-[0.74rem] font-medium tracking-[0.18em] uppercase">
+              Order summary
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {lines.reduce((sum, line) => sum + line.quantity, 0)} item
+              {lines.reduce((sum, line) => sum + line.quantity, 0) === 1 ? "" : "s"}
+            </span>
+          </h2>
+          <ul className="mt-5 space-y-4">
+            {member.lines.map((line) => (
+              <li key={line.key} className="flex gap-3.5 text-sm">
+                <span className="relative shrink-0">
+                  <img
+                    src={cdnImageUrl(line.image)}
+                    alt=""
+                    className="aspect-[2/3] w-14 bg-muted object-cover"
+                  />
+                  <span className="absolute -top-2 -right-2 grid size-5 place-items-center rounded-full bg-ink text-[0.62rem] text-white">
+                    {line.quantity}
+                  </span>
+                </span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium">{line.name}</p>
+                  <p className="truncate text-[0.8rem] font-medium tracking-[0.08em] uppercase">
+                    {line.name}
+                  </p>
                   <p className="text-muted-foreground">
-                    {line.color} · {line.size} · Qty {line.quantity}
+                    {line.color} · {line.size}
                   </p>
                   <p className="mt-1 font-semibold text-teal">
-                    {hasOffer && !couponQuote?.ok ? (
+                    {line.isMemberPriced ? (
+                      <span className="flex flex-col">
+                        <span className="text-xs font-normal text-muted-foreground line-through">
+                          {formatInr(line.regularUnitPrice * line.quantity)}
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          {formatInr(line.lineTotal)}
+                          <span className="bg-ink px-1 py-0.5 text-[0.52rem] font-normal tracking-[0.14em] text-white uppercase">
+                            Insider
+                          </span>
+                        </span>
+                      </span>
+                    ) : hasOffer && !couponQuote?.ok ? (
                       <span className="flex flex-col">
                         <span className="text-xs font-normal text-muted-foreground line-through">
                           {formatInr(line.lineTotal)}
@@ -753,26 +1055,36 @@ export default function CheckoutClient() {
             ))}
           </ul>
           <div className="mt-5 space-y-2 border-t border-border pt-4 text-sm">
-            <div className="flex gap-2">
-              <Input
-                value={couponInput}
-                onChange={(e) => {
-                  setCouponInput(e.target.value);
-                  setCouponQuote(null);
-                }}
-                placeholder="Coupon code"
-                className="h-11 rounded-full"
-              />
-              <Button
+            {!couponOpen && !couponInput ? (
+              <button
                 type="button"
-                variant="outline"
-                disabled={couponBusy || !couponInput.trim()}
-                onClick={() => void applyCoupon()}
-                className="h-11 shrink-0 rounded-full"
+                onClick={() => setCouponOpen(true)}
+                className="pb-1 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
               >
-                {couponBusy ? <Loader2 className="size-4 animate-spin" /> : "Apply"}
-              </Button>
-            </div>
+                Have a coupon code?
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  value={couponInput}
+                  onChange={(e) => {
+                    setCouponInput(e.target.value);
+                    setCouponQuote(null);
+                  }}
+                  placeholder="Coupon code"
+                  className="h-11"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={couponBusy || !couponInput.trim()}
+                  onClick={() => void applyCoupon()}
+                  className="h-11 shrink-0"
+                >
+                  {couponBusy ? <Loader2 className="size-4 animate-spin" /> : "Apply"}
+                </Button>
+              </div>
+            )}
             {couponQuote && !couponQuote.ok ? (
               <p className="text-xs text-destructive">
                 {couponQuote.error || "This coupon is not valid."}
@@ -786,6 +1098,12 @@ export default function CheckoutClient() {
               <span className="text-muted-foreground">Shipping</span>
               <span>Free</span>
             </div>
+            {memberSavings > 0 ? (
+              <div className="flex justify-between">
+                <span>AB Insider prices</span>
+                <span>-{formatInr(memberSavings)}</span>
+              </div>
+            ) : null}
             {couponSavings > 0 ? (
               <div className="flex justify-between text-teal">
                 <span>{previewCode || "Discount"}</span>
@@ -800,9 +1118,20 @@ export default function CheckoutClient() {
             ) : null}
             <div className="flex justify-between text-base font-bold">
               <span>Total</span>
-              <span className="text-teal">{formatInr(total)}</span>
+              <span className="text-teal">{formatInr(priceNotice?.total ?? total)}</span>
             </div>
           </div>
+          {priceNotice ? (
+            <div className="mt-4 border border-ink bg-paper p-4 text-sm" role="alert">
+              <p className="font-medium">Your total has changed</p>
+              <p className="mt-1 text-muted-foreground">
+                Prices were updated since you opened checkout (for example, a membership ended or a
+                price changed). The new total is{" "}
+                <b className="font-medium text-foreground">{formatInr(priceNotice.total)}</b>. Pay
+                below to continue at this price.
+              </p>
+            </div>
+          ) : null}
           {error ? (
             <p className="mt-4 text-sm text-destructive" role="alert">
               {error}
@@ -814,7 +1143,7 @@ export default function CheckoutClient() {
                 {issues.map((issue) => (
                   <li
                     key={`${issue.key}-${issue.type}`}
-                    className="rounded-2xl border border-destructive/30 bg-background px-3 py-2"
+                    className="border border-destructive/30 bg-background px-3 py-2"
                   >
                     <p className="font-medium">{formatCartIssue(issue)}</p>
                     <p className="mt-1 text-xs leading-relaxed">{issue.message}</p>
@@ -825,7 +1154,7 @@ export default function CheckoutClient() {
                 type="button"
                 variant="outline"
                 onClick={openCart}
-                className="mt-3 h-11 w-full rounded-full text-xs font-semibold tracking-[0.12em] uppercase"
+                className="mt-3 h-11 w-full text-xs font-semibold tracking-[0.12em] uppercase"
               >
                 Review cart
               </Button>
@@ -835,7 +1164,7 @@ export default function CheckoutClient() {
             ref={payRef}
             type="submit"
             disabled={submitting}
-            className="mt-6 h-14 w-full rounded-full bg-teal text-sm font-semibold tracking-[0.08em] text-teal-foreground uppercase"
+            className="mt-6 h-13 w-full bg-ink text-[0.78rem] font-normal tracking-[0.18em] text-white uppercase hover:bg-[#333]"
           >
             {submitting ? (
               <>
@@ -843,15 +1172,25 @@ export default function CheckoutClient() {
                 {paying ? "Waiting for payment..." : "Confirming payment..."}
               </>
             ) : total > 0 ? (
-              `Pay ${formatInr(total)}`
+              payLabel
             ) : (
               "Place order"
             )}
           </Button>
-          <p className="mt-3 text-center text-xs text-muted-foreground">
-            Prepaid via Cashfree. UPI, cards, and netbanking. Inventory is reserved only after
-            payment succeeds.
-          </p>
+          <ul className="mt-5 grid gap-2 border-t border-border pt-4 text-xs text-muted-foreground">
+            <li className="flex items-center gap-2.5">
+              <Lock className="size-3.5 shrink-0" strokeWidth={1.4} aria-hidden />
+              Secure prepaid checkout by Cashfree
+            </li>
+            <li className="flex items-center gap-2.5">
+              <Truck className="size-3.5 shrink-0" strokeWidth={1.4} aria-hidden />
+              Free shipping · dispatch in 2–3 business days
+            </li>
+            <li className="flex items-center gap-2.5">
+              <RefreshCw className="size-3.5 shrink-0" strokeWidth={1.4} aria-hidden />
+              Exchange on defects or wrong items within 2 days
+            </li>
+          </ul>
         </aside>
         <div
           className={cn(
@@ -863,14 +1202,14 @@ export default function CheckoutClient() {
           <Button
             type="submit"
             disabled={submitting}
-            className="h-12 w-full rounded-full bg-teal text-sm font-semibold tracking-[0.08em] text-teal-foreground uppercase"
+            className="h-12 w-full bg-teal text-sm font-semibold tracking-[0.08em] text-teal-foreground uppercase"
           >
             {submitting
               ? paying
                 ? "Waiting for payment..."
                 : "Confirming payment..."
               : total > 0
-                ? `Pay ${formatInr(total)}`
+                ? payLabel
                 : "Place order"}
           </Button>
         </div>

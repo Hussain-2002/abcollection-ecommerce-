@@ -72,6 +72,8 @@ export const checkoutSchema = z.object({
   promoCode: z.string().trim().max(40).optional().or(z.literal("")),
   checkoutId: z.string().uuid().optional(),
   cashfreeOrderId: z.string().trim().min(3).max(50).optional(),
+  /** Total the shopper saw; a mismatch asks them to confirm the new price. */
+  expectedTotal: z.number().int().min(0).optional(),
 });
 
 export const trackOrderRequestSchema = z.object({
@@ -216,6 +218,9 @@ export type Order = {
   promoCode?: string | null;
   couponDiscount?: number;
   bundleDiscount?: number;
+  /** AB Insider saving on this order, against regular prices. */
+  memberDiscount?: number;
+  customerMembershipId?: string | null;
   invoiceNumber?: string | null;
   paymentMethod?: string | null;
   paymentId?: string | null;

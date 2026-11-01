@@ -146,10 +146,7 @@ export function ProductMediaFields({
         {rows.map((row, index) => {
           const colorRoom = Math.min(remainingTotal, COLOR_IMAGE_LIMIT - row.images.length);
           return (
-            <div
-              key={row.key}
-              className="space-y-3 rounded-2xl border border-border bg-muted/20 p-3"
-            >
+            <div key={row.key} className="space-y-3 border border-border bg-muted/20 p-3">
               <div className="flex flex-wrap items-end gap-3">
                 <span
                   aria-hidden
@@ -176,7 +173,7 @@ export function ProductMediaFields({
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-10 rounded-full"
+                  className="h-10"
                   onClick={() => {
                     const next = rows.filter((item) => item.key !== row.key);
                     commit(next.length ? next : [{ key: nextKey(), name: "", images: [] }], extras);
@@ -190,13 +187,9 @@ export function ProductMediaFields({
               <div className="flex flex-wrap gap-3">
                 {row.images.map((src, imageIndex) => (
                   <div key={`${row.key}-${src}-${imageIndex}`} className="relative">
-                    <img
-                      src={src}
-                      alt=""
-                      className="h-24 w-20 rounded-lg object-cover object-top"
-                    />
+                    <img src={src} alt="" className="h-24 w-20 object-cover object-top" />
                     {imageIndex === 0 ? (
-                      <span className="absolute bottom-1 left-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-medium">
+                      <span className="absolute bottom-1 left-1 bg-white/90 px-1.5 py-0.5 text-[10px] font-medium">
                         Cover
                       </span>
                     ) : (
@@ -213,7 +206,7 @@ export function ProductMediaFields({
                             extras,
                           )
                         }
-                        className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-medium"
+                        className="absolute bottom-1 left-1 inline-flex items-center gap-1 bg-white/90 px-1.5 py-0.5 text-[10px] font-medium"
                       >
                         <Star className="size-2.5" />
                         Set as cover
@@ -257,7 +250,7 @@ export function ProductMediaFields({
                       event.target.value = "";
                     }}
                   />
-                  <span className="inline-flex h-24 w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-white text-xs font-medium">
+                  <span className="inline-flex h-24 w-20 cursor-pointer flex-col items-center justify-center gap-1 border border-dashed border-border bg-white text-xs font-medium">
                     {uploading === row.key ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (
@@ -278,7 +271,7 @@ export function ProductMediaFields({
       <Button
         type="button"
         variant="outline"
-        className="rounded-full"
+        className=""
         onClick={() => commit([...rows, { key: nextKey(), name: "", images: [] }], extras)}
       >
         <Plus className="size-4" />
@@ -295,7 +288,7 @@ export function ProductMediaFields({
         <div className="flex flex-wrap gap-3">
           {extras.map((src, index) => (
             <div key={`${src}-${index}`} className="relative">
-              <img src={src} alt="" className="h-24 w-20 rounded-lg object-cover object-top" />
+              <img src={src} alt="" className="h-24 w-20 object-cover object-top" />
               <button
                 type="button"
                 aria-label="Remove photo"
@@ -325,7 +318,7 @@ export function ProductMediaFields({
                 event.target.value = "";
               }}
             />
-            <span className="inline-flex h-24 w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-white text-xs font-medium">
+            <span className="inline-flex h-24 w-20 cursor-pointer flex-col items-center justify-center gap-1 border border-dashed border-border bg-white text-xs font-medium">
               {uploading === "extra" ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (

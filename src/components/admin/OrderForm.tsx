@@ -23,7 +23,7 @@ import type { OrderNotification } from "@/lib/notifications";
 import { formatInr, parsePriceInr } from "@/lib/price";
 
 const EXTRA = ["cancelled", "failed", "returned"] as const;
-const INPUT = "mt-1.5 h-11 rounded-xl bg-white";
+const INPUT = "mt-1.5 h-11 bg-white";
 
 type FormItem = {
   productId: string;
@@ -235,7 +235,7 @@ export function OrderForm({
         <div className="flex flex-wrap gap-2">
           {mode === "edit" && initial ? (
             <>
-              <Button asChild variant="outline" className="h-11 rounded-full">
+              <Button asChild variant="outline" className="h-11">
                 <a
                   href={`/api/admin/orders/${initial.id}/invoice`}
                   target="_blank"
@@ -263,7 +263,7 @@ export function OrderForm({
           <Button
             type="submit"
             disabled={saving}
-            className="h-11 rounded-full bg-teal px-6 text-xs tracking-[0.1em] text-teal-foreground uppercase"
+            className="h-11 bg-teal px-6 text-xs tracking-[0.1em] text-teal-foreground uppercase"
           >
             {saving ? <Loader2 className="size-4 animate-spin" /> : null}
             {mode === "create" ? "Create order" : "Save changes"}
@@ -375,7 +375,7 @@ export function OrderForm({
           <Button
             type="button"
             variant="outline"
-            className="h-10 rounded-full"
+            className="h-10"
             onClick={() => setField("items", [...form.items, emptyItem()])}
           >
             <Plus className="size-4" />
@@ -386,10 +386,7 @@ export function OrderForm({
           {form.items.map((item, index) => {
             const product = products.find((row) => row.id === item.productId);
             return (
-              <div
-                key={`${item.productId}-${index}`}
-                className="rounded-2xl border border-border p-4"
-              >
+              <div key={`${item.productId}-${index}`} className="border border-border p-4">
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
                   <label className="text-sm lg:col-span-2">
                     Product
@@ -493,7 +490,7 @@ export function OrderForm({
                       <Button
                         type="button"
                         variant="ghost"
-                        className="h-10 rounded-full text-destructive"
+                        className="h-10 text-destructive"
                         onClick={() =>
                           setField(
                             "items",
@@ -532,7 +529,7 @@ export function OrderForm({
               className={`mt-1.5 ${INPUT}`}
             />
           </label>
-          <div className="rounded-xl bg-sand px-4 py-3 text-sm">
+          <div className="bg-muted px-4 py-3 text-sm">
             <p className="text-muted-foreground">Subtotal {formatInr(subtotal)}</p>
             <p className="mt-1 font-bold text-teal">Total {formatInr(total)}</p>
           </div>
@@ -643,7 +640,7 @@ export function OrderForm({
         <Button
           type="submit"
           disabled={saving}
-          className="h-11 rounded-full bg-teal px-8 text-xs tracking-[0.1em] text-teal-foreground uppercase"
+          className="h-11 bg-teal px-8 text-xs tracking-[0.1em] text-teal-foreground uppercase"
         >
           {saving ? <Loader2 className="size-4 animate-spin" /> : null}
           {mode === "create" ? "Create order" : "Save changes"}

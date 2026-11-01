@@ -33,6 +33,8 @@ const TONE_BY_STATUS: Record<string, StatusTone> = {
   returned: "danger",
   rejected: "danger",
   expired: "danger",
+  revoked: "danger",
+  "admin granted": "info",
   exhausted: "danger",
   removed: "danger",
   "out of stock": "danger",
@@ -86,7 +88,7 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap capitalize",
+        "inline-flex items-center border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap capitalize",
         TONES[tone ?? statusTone(status)],
         className,
       )}

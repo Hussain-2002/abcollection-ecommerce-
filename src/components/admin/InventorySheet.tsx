@@ -106,7 +106,7 @@ function StockField({
       onKeyDown={(event) => {
         if (event.key === "Enter") event.currentTarget.blur();
       }}
-      className="h-8 w-16 rounded-full px-2 text-center text-sm tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+      className="h-8 w-16 px-2 text-center text-sm tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
     />
   );
 }
@@ -209,9 +209,9 @@ export function InventorySheet({
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Search product, category, or colour"
-        className="h-10 max-w-sm rounded-full bg-white"
+        className="h-10 max-w-sm bg-white"
       />
-      <div className="overflow-x-auto rounded-2xl border border-border bg-white">
+      <div className="overflow-x-auto border border-border bg-white">
         <Table className="min-w-[980px]">
           <TableHeader>
             <TableRow>
@@ -236,11 +236,7 @@ export function InventorySheet({
                   <TableRow key={row.key}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <img
-                          src={row.image}
-                          alt=""
-                          className="size-12 rounded-lg object-cover object-top"
-                        />
+                        <img src={row.image} alt="" className="size-12 object-cover object-top" />
                         <div>
                           <p className="font-medium">{row.productName}</p>
                           <p className="text-xs text-muted-foreground">{row.category}</p>
@@ -312,8 +308,8 @@ export function InventorySheet({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-full">Keep current count</AlertDialogCancel>
-            <Button type="button" className="rounded-full" onClick={() => void confirmChange()}>
+            <AlertDialogCancel className="">Keep current count</AlertDialogCancel>
+            <Button type="button" className="" onClick={() => void confirmChange()}>
               Update inventory
             </Button>
           </AlertDialogFooter>

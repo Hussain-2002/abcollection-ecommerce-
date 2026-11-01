@@ -7,7 +7,7 @@ export function AnalyticsSetupNotice({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "rounded-3xl border border-amber-200 bg-amber-50 px-5 py-5 text-sm text-amber-950",
+        "border border-amber-200 bg-amber-50 px-5 py-5 text-sm text-amber-950",
         className,
       )}
     >
@@ -20,7 +20,7 @@ export function AnalyticsSetupNotice({ className }: { className?: string }) {
         <li>Paste the SQL below and click Run</li>
         <li>Refresh this page</li>
       </ol>
-      <pre className="mt-4 max-h-64 overflow-auto rounded-2xl border border-amber-200/80 bg-white p-4 text-xs leading-relaxed text-foreground">
+      <pre className="mt-4 max-h-64 overflow-auto border border-amber-200/80 bg-white p-4 text-xs leading-relaxed text-foreground">
         {sql.trim()}
       </pre>
     </div>

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { quoteCoupon } from "@/lib/promotions.server";
-import { getCustomerSession } from "@/lib/customer-auth.server";
+import { getCheckoutCustomer } from "@/lib/guest-checkout.server";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ const bodySchema = z.object({
 export async function POST(request: Request) {
   try {
     const body = bodySchema.parse(await request.json());
-    const session = await getCustomerSession();
+    const session = await getCheckoutCustomer();
     const quote = await quoteCoupon({
       code: body.code,
       customerId: session?.id,

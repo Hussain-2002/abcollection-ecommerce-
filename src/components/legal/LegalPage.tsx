@@ -53,7 +53,7 @@ export function LegalPage({ document }: LegalPageProps) {
   return (
     <article className="mx-auto max-w-3xl px-5 py-14 sm:px-8 sm:py-20">
       <p className="eyebrow">Legal</p>
-      <h1 className="mt-4 font-display text-[2rem] font-bold tracking-tight sm:text-4xl">
+      <h1 className="mt-4 font-display text-[2rem] font-normal tracking-tight sm:text-4xl">
         {document.title}
       </h1>
       <p className="mt-3 text-sm text-muted-foreground">Last updated: {document.lastUpdated}</p>
@@ -78,7 +78,7 @@ export function LegalPage({ document }: LegalPageProps) {
         ))}
       </div>
 
-      <section className="mt-12 rounded-2xl border border-border bg-sand p-6">
+      <section className="mt-12 border border-border bg-paper p-6">
         <h2 className="font-display text-lg font-semibold">Contact</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           {LEGAL_CONTACT.brand}

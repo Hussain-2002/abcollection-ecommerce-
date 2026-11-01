@@ -12,8 +12,8 @@ export function OrderProcessingScreen({
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center px-5 py-16 text-center">
       <div className="relative size-16" aria-hidden>
-        <span className="absolute inset-0 rounded-full border-2 border-gold/25" />
-        <Loader2 className="size-16 animate-spin text-gold" strokeWidth={1.5} />
+        <span className="absolute inset-0 border-2 border-border" />
+        <Loader2 className="size-16 animate-spin text-foreground" strokeWidth={1.5} />
       </div>
       <h1 className="mt-8 font-display text-[1.85rem] font-semibold tracking-tight sm:text-4xl">
         {title}
@@ -32,7 +32,7 @@ export function OrderProcessingOverlay({
 }) {
   return (
     <div
-      className="fixed inset-0 z-80 flex items-center justify-center bg-ivory/95 px-5 backdrop-blur-sm"
+      className="fixed inset-0 z-80 flex items-center justify-center bg-background/95 px-5 backdrop-blur-sm"
       role="status"
       aria-live="assertive"
       aria-busy="true"

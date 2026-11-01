@@ -28,7 +28,7 @@ export default async function AdminProductsPage() {
           <>
             <ExportCsvButton type="products" label="Export products CSV" />
             <ExportCsvButton type="inventory" label="Export inventory CSV" />
-            <Button asChild className="rounded-full bg-teal text-teal-foreground hover:bg-teal/90">
+            <Button asChild className="bg-teal text-teal-foreground hover:bg-teal/90">
               <Link href="/admin/products/new">Add product</Link>
             </Button>
           </>

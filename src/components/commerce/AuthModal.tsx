@@ -135,7 +135,7 @@ export function AuthModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(100%,calc(100vw-1.5rem))] max-w-md rounded-3xl border-border p-0 sm:max-w-md">
+      <DialogContent className="w-[min(100%,calc(100vw-1.5rem))] max-w-md border-border p-0 sm:max-w-md">
         <div className="px-6 pt-6 pb-2">
           <DialogHeader>
             <DialogTitle className="font-display text-3xl">
@@ -169,7 +169,7 @@ export function AuthModal({
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
-                  className="mt-1.5 h-11 rounded-full"
+                  className="mt-1.5 h-11"
                 />
               </div>
               <div>
@@ -180,7 +180,7 @@ export function AuthModal({
                   onChange={(e) => setPhone(e.target.value)}
                   required
                   inputMode="tel"
-                  className="mt-1.5 h-11 rounded-full"
+                  className="mt-1.5 h-11"
                 />
               </div>
             </>
@@ -194,7 +194,7 @@ export function AuthModal({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1.5 h-11 rounded-full"
+              className="mt-1.5 h-11"
             />
           </div>
 
@@ -211,7 +211,7 @@ export function AuthModal({
                 minLength={6}
                 maxLength={6}
                 placeholder="6-digit code"
-                className="mt-1.5 h-11 rounded-full tracking-[0.2em]"
+                className="mt-1.5 h-11 tracking-[0.2em]"
               />
             </div>
           ) : null}
@@ -243,7 +243,7 @@ export function AuthModal({
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={mode === "login" ? 1 : 8}
-                className="mt-1.5 h-11 rounded-full"
+                className="mt-1.5 h-11"
               />
             </div>
           )}
@@ -258,7 +258,7 @@ export function AuthModal({
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 minLength={8}
-                className="mt-1.5 h-11 rounded-full"
+                className="mt-1.5 h-11"
               />
             </div>
           ) : null}
@@ -277,7 +277,7 @@ export function AuthModal({
           <Button
             type="submit"
             disabled={loading}
-            className="h-11 w-full rounded-full bg-teal text-xs font-semibold tracking-[0.12em] text-teal-foreground uppercase hover:bg-teal/90"
+            className="h-11 w-full bg-teal text-xs font-semibold tracking-[0.12em] text-teal-foreground uppercase hover:bg-teal/90"
           >
             {loading ? (
               <Loader2 className="size-4 animate-spin" />

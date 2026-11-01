@@ -63,7 +63,7 @@ export function ColorCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="mt-1 h-11 w-full justify-between rounded-xl border-border bg-white px-3 font-normal shadow-none"
+          className="mt-1 h-11 w-full justify-between border-border bg-white px-3 font-normal shadow-none"
         >
           <span className="flex min-w-0 items-center gap-2">
             <span

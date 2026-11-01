@@ -25,7 +25,7 @@ export default async function AdminOrdersPage() {
         actions={
           <>
             <ExportCsvButton type="orders" label="Export CSV" />
-            <Button asChild className="rounded-full bg-teal text-teal-foreground hover:bg-teal/90">
+            <Button asChild className="bg-teal text-teal-foreground hover:bg-teal/90">
               <Link href="/admin/orders/new">Add order</Link>
             </Button>
           </>

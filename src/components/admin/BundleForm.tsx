@@ -186,7 +186,7 @@ export function BundleForm({
               value={form.id}
               onChange={(e) => setForm((prev) => ({ ...prev, id: e.target.value }))}
               placeholder="three-tee-bundle"
-              className="h-11 rounded-xl bg-white"
+              className="h-11 bg-white"
             />
           </label>
           <label className="space-y-2 text-sm">
@@ -196,7 +196,7 @@ export function BundleForm({
               value={form.title}
               onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
               placeholder="Everyday 3-pack"
-              className="h-11 rounded-xl bg-white"
+              className="h-11 bg-white"
             />
           </label>
           <label className="space-y-2 text-sm">
@@ -226,7 +226,7 @@ export function BundleForm({
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, discountPercent: Number(e.target.value) || 0 }))
                 }
-                className="h-11 rounded-xl bg-white"
+                className="h-11 bg-white"
               />
             </label>
           ) : (
@@ -240,7 +240,7 @@ export function BundleForm({
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, bundlePrice: Number(e.target.value) || 0 }))
                 }
-                className="h-11 rounded-xl bg-white"
+                className="h-11 bg-white"
               />
             </label>
           )}
@@ -252,7 +252,7 @@ export function BundleForm({
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, sortOrder: Number(e.target.value) || 0 }))
               }
-              className="h-11 rounded-xl bg-white"
+              className="h-11 bg-white"
             />
           </label>
           <label className="space-y-2 text-sm">
@@ -266,7 +266,7 @@ export function BundleForm({
                   startsAt: e.target.value ? new Date(e.target.value).toISOString() : "",
                 }))
               }
-              className="h-11 rounded-xl bg-white"
+              className="h-11 bg-white"
             />
           </label>
           <label className="space-y-2 text-sm">
@@ -280,7 +280,7 @@ export function BundleForm({
                   endsAt: e.target.value ? new Date(e.target.value).toISOString() : "",
                 }))
               }
-              className="h-11 rounded-xl bg-white"
+              className="h-11 bg-white"
             />
           </label>
         </div>
@@ -307,7 +307,7 @@ export function BundleForm({
             <Button
               type="button"
               variant="outline"
-              className="rounded-full"
+              className=""
               disabled={form.productIds.length >= 12 || products.length === 0}
               onClick={addLine}
             >
@@ -328,7 +328,7 @@ export function BundleForm({
               const product = products.find((row) => row.id === productId);
               const color = form.productColors[index] ?? "";
               return (
-                <div key={`${index}-${productId}`} className="rounded-xl border border-border p-3">
+                <div key={`${index}-${productId}`} className="border border-border p-3">
                   <div className="flex items-start gap-3">
                     <div className="min-w-0 flex-1 space-y-3">
                       <label className="block space-y-2 text-sm">
@@ -356,7 +356,7 @@ export function BundleForm({
                                 aria-pressed={selected}
                                 onClick={() => setLineColor(index, option)}
                                 className={cn(
-                                  "inline-flex h-10 items-center gap-2 rounded-full border px-3 text-sm",
+                                  "inline-flex h-10 items-center gap-2 border px-3 text-sm",
                                   selected
                                     ? "border-foreground bg-foreground text-background"
                                     : "border-border bg-background hover:border-foreground",
@@ -400,17 +400,12 @@ export function BundleForm({
           <Button
             type="submit"
             disabled={saving || deleting}
-            className="rounded-full bg-teal text-teal-foreground"
+            className="bg-teal text-teal-foreground"
           >
             {saving ? <Loader2 className="size-4 animate-spin" /> : null}
             {mode === "create" ? "Create bundle" : "Save changes"}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full"
-            onClick={() => router.back()}
-          >
+          <Button type="button" variant="outline" className="" onClick={() => router.back()}>
             Cancel
           </Button>
           {mode === "edit" ? (
@@ -418,7 +413,7 @@ export function BundleForm({
               type="button"
               variant="outline"
               disabled={deleting || saving}
-              className="rounded-full text-destructive"
+              className="text-destructive"
               onClick={() => {
                 if (!confirm("Delete this bundle? It will no longer appear on product pages."))
                   return;

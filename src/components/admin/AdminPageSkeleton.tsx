@@ -13,7 +13,7 @@ function HeaderSkeleton({ action = true }: { action?: boolean }) {
         <Skeleton className={`h-9 w-48 ${bone}`} />
         <Skeleton className={`h-4 w-72 max-w-full ${bone}`} />
       </div>
-      {action ? <Skeleton className={`h-10 w-32 rounded-full ${bone}`} /> : null}
+      {action ? <Skeleton className={`h-10 w-32 ${bone}`} /> : null}
     </div>
   );
 }
@@ -23,8 +23,8 @@ function TableSkeleton() {
     <>
       <HeaderSkeleton />
       <div className="mt-8 space-y-3">
-        <Skeleton className={`h-10 w-full max-w-sm rounded-full ${bone}`} />
-        <div className="overflow-hidden rounded-2xl border border-border bg-white">
+        <Skeleton className={`h-10 w-full max-w-sm ${bone}`} />
+        <div className="overflow-hidden border border-border bg-white">
           <div className="grid grid-cols-4 gap-4 border-b px-4 py-3">
             {Array.from({ length: 4 }, (_, index) => (
               <Skeleton key={index} className={`h-3 w-16 ${bone}`} />
@@ -37,7 +37,7 @@ function TableSkeleton() {
             >
               <Skeleton className={`h-4 w-32 ${bone}`} />
               <Skeleton className={`h-4 w-20 ${bone}`} />
-              <Skeleton className={`h-5 w-16 rounded-full ${bone}`} />
+              <Skeleton className={`h-5 w-16 ${bone}`} />
               <Skeleton className={`ml-auto size-8 rounded-md ${bone}`} />
             </div>
           ))}
@@ -51,16 +51,16 @@ function FormSkeleton() {
   return (
     <>
       <HeaderSkeleton action={false} />
-      <div className="mt-8 rounded-xl border bg-white p-6">
+      <div className="mt-8 border bg-white p-6">
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 6 }, (_, index) => (
             <div key={index} className="space-y-2">
               <Skeleton className={`h-3 w-24 ${bone}`} />
-              <Skeleton className={`h-11 w-full rounded-xl ${bone}`} />
+              <Skeleton className={`h-11 w-full ${bone}`} />
             </div>
           ))}
         </div>
-        <Skeleton className={`mt-6 h-11 w-36 rounded-full ${bone}`} />
+        <Skeleton className={`mt-6 h-11 w-36 ${bone}`} />
       </div>
     </>
   );
@@ -72,7 +72,7 @@ function DashboardSkeleton() {
       <HeaderSkeleton />
       <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
-          <div key={index} className="rounded-xl border bg-white p-6">
+          <div key={index} className="border bg-white p-6">
             <Skeleton className={`h-3 w-24 ${bone}`} />
             <Skeleton className={`mt-4 h-8 w-28 ${bone}`} />
             <Skeleton className={`mt-2 h-3 w-20 ${bone}`} />
@@ -81,11 +81,11 @@ function DashboardSkeleton() {
       </div>
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         {Array.from({ length: 2 }, (_, panel) => (
-          <div key={panel} className="rounded-xl border bg-white p-6">
+          <div key={panel} className="border bg-white p-6">
             <Skeleton className={`h-6 w-36 ${bone}`} />
             <div className="mt-4 space-y-3">
               {Array.from({ length: 4 }, (_, row) => (
-                <Skeleton key={row} className={`h-12 w-full rounded-xl ${bone}`} />
+                <Skeleton key={row} className={`h-12 w-full ${bone}`} />
               ))}
             </div>
           </div>
@@ -101,15 +101,15 @@ function AnalyticsSkeleton() {
       <HeaderSkeleton action={false} />
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
-          <div key={index} className="rounded-xl border bg-white p-6">
+          <div key={index} className="border bg-white p-6">
             <Skeleton className={`h-3 w-24 ${bone}`} />
             <Skeleton className={`mt-4 h-8 w-24 ${bone}`} />
           </div>
         ))}
       </div>
-      <div className="mt-8 rounded-xl border bg-white p-6">
+      <div className="mt-8 border bg-white p-6">
         <Skeleton className={`h-6 w-48 ${bone}`} />
-        <Skeleton className={`mt-6 h-72 w-full rounded-xl ${bone}`} />
+        <Skeleton className={`mt-6 h-72 w-full ${bone}`} />
       </div>
     </>
   );
@@ -119,19 +119,19 @@ function EditorSkeleton() {
   return (
     <>
       <HeaderSkeleton action={false} />
-      <div className="mt-8 rounded-xl border bg-white p-6">
+      <div className="mt-8 border bg-white p-6">
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 4 }, (_, index) => (
             <div key={index} className="space-y-2">
               <Skeleton className={`h-3 w-24 ${bone}`} />
-              <Skeleton className={`h-11 w-full rounded-xl ${bone}`} />
+              <Skeleton className={`h-11 w-full ${bone}`} />
             </div>
           ))}
         </div>
-        <Skeleton className={`mt-6 h-28 w-full rounded-xl ${bone}`} />
-        <Skeleton className={`mt-6 h-11 w-36 rounded-full ${bone}`} />
+        <Skeleton className={`mt-6 h-28 w-full ${bone}`} />
+        <Skeleton className={`mt-6 h-11 w-36 ${bone}`} />
       </div>
-      <div className="mt-8 overflow-hidden rounded-2xl border border-border bg-white">
+      <div className="mt-8 overflow-hidden border border-border bg-white">
         {Array.from({ length: 4 }, (_, row) => (
           <div key={row} className="border-b px-4 py-3 last:border-0">
             <Skeleton className={`h-4 w-2/3 ${bone}`} />

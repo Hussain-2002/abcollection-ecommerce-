@@ -132,7 +132,7 @@ export function ShippingSettingsForm({
               return (
                 <div
                   key={product.id}
-                  className="grid gap-2 rounded-xl border border-border px-3 py-2 sm:grid-cols-[1fr_6rem_6rem] sm:items-center"
+                  className="grid gap-2 border border-border px-3 py-2 sm:grid-cols-[1fr_6rem_6rem] sm:items-center"
                 >
                   <label className="flex items-center gap-2 text-sm">
                     <Checkbox
@@ -148,7 +148,7 @@ export function ShippingSettingsForm({
                         min={0}
                         value={rule.extraMinDays}
                         onChange={(e) => setRuleDays(product.id, "extraMinDays", e.target.value)}
-                        className="h-10 rounded-xl bg-white"
+                        className="h-10 bg-white"
                         aria-label={`${product.name} extra min days`}
                       />
                       <Input
@@ -156,7 +156,7 @@ export function ShippingSettingsForm({
                         min={0}
                         value={rule.extraMaxDays}
                         onChange={(e) => setRuleDays(product.id, "extraMaxDays", e.target.value)}
-                        className="h-10 rounded-xl bg-white"
+                        className="h-10 bg-white"
                         aria-label={`${product.name} extra max days`}
                       />
                     </>
@@ -170,11 +170,7 @@ export function ShippingSettingsForm({
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         {saved ? <p className="text-sm text-teal">Shipping settings saved.</p> : null}
 
-        <Button
-          type="submit"
-          disabled={saving}
-          className="rounded-full bg-teal text-teal-foreground"
-        >
+        <Button type="submit" disabled={saving} className="bg-teal text-teal-foreground">
           {saving ? <Loader2 className="size-4 animate-spin" /> : null}
           Save shipping settings
         </Button>
@@ -200,7 +196,7 @@ function NumberField({
         min={0}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-11 rounded-xl bg-white"
+        className="h-11 bg-white"
       />
     </div>
   );

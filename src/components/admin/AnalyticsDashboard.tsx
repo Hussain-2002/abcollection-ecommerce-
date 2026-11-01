@@ -138,10 +138,7 @@ export function AnalyticsDashboard({ initial }: { initial: AnalyticsSummary }) {
             key={key}
             type="button"
             variant={period === key ? "default" : "outline"}
-            className={cn(
-              "rounded-full",
-              period === key && "bg-teal text-teal-foreground hover:bg-teal/90",
-            )}
+            className={cn("", period === key && "bg-teal text-teal-foreground hover:bg-teal/90")}
             onClick={() => setPeriod(key)}
           >
             {label}
@@ -156,7 +153,7 @@ export function AnalyticsDashboard({ initial }: { initial: AnalyticsSummary }) {
               type="date"
               value={customFrom}
               onChange={(event) => setCustomFrom(event.target.value)}
-              className="ml-2 h-10 rounded-full border border-border px-3"
+              className="ml-2 h-10 border border-border px-3"
             />
           </label>
           <label className="text-sm">
@@ -165,7 +162,7 @@ export function AnalyticsDashboard({ initial }: { initial: AnalyticsSummary }) {
               type="date"
               value={customTo}
               onChange={(event) => setCustomTo(event.target.value)}
-              className="ml-2 h-10 rounded-full border border-border px-3"
+              className="ml-2 h-10 border border-border px-3"
             />
           </label>
         </div>
@@ -199,7 +196,7 @@ export function AnalyticsDashboard({ initial }: { initial: AnalyticsSummary }) {
         />
       </div>
 
-      <section className="mt-8 rounded-3xl border border-border bg-white p-6">
+      <section className="mt-8 border border-border bg-white p-6">
         <h2 className="font-display text-xl font-semibold">Revenue / orders trend</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Confirmed sales only. Cancelled, failed, and returned orders are excluded.
@@ -217,7 +214,7 @@ export function AnalyticsDashboard({ initial }: { initial: AnalyticsSummary }) {
                   type="monotone"
                   dataKey="revenue"
                   name="Revenue"
-                  stroke="#B89A5A"
+                  stroke="#111111"
                   strokeWidth={2}
                 />
                 <Line
@@ -298,7 +295,7 @@ export function AnalyticsDashboard({ initial }: { initial: AnalyticsSummary }) {
           ])}
           empty="No coupon usage in this period."
         />
-        <section className="rounded-3xl border border-border bg-white p-6">
+        <section className="border border-border bg-white p-6">
           <h2 className="font-display text-xl font-semibold">Checkout funnel</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             From storefront events already tracked on this site.
@@ -326,7 +323,7 @@ export function AnalyticsDashboard({ initial }: { initial: AnalyticsSummary }) {
         <StatCard label="Clicks tracked" value={data.clicks.toLocaleString("en-IN")} />
       </div>
 
-      <section className="mt-8 rounded-3xl border border-border bg-white p-6">
+      <section className="mt-8 border border-border bg-white p-6">
         <h2 className="font-display text-xl font-semibold">Traffic over time</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Daily page views and unique sessions in the selected period.
@@ -340,7 +337,7 @@ export function AnalyticsDashboard({ initial }: { initial: AnalyticsSummary }) {
                 <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="pageViews" name="Page views" fill="#B89A5A" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="pageViews" name="Page views" fill="#111111" radius={[4, 4, 0, 0]} />
                 <Bar
                   dataKey="uniqueSessions"
                   name="Unique sessions"
@@ -391,7 +388,7 @@ export function AnalyticsDashboard({ initial }: { initial: AnalyticsSummary }) {
         />
       </div>
 
-      <section className="mt-8 rounded-3xl border border-border bg-white p-6">
+      <section className="mt-8 border border-border bg-white p-6">
         <h2 className="font-display text-xl font-semibold">Recent activity</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Latest page views and clicks across the site.
@@ -449,7 +446,7 @@ function StatCard({
   hint?: string | undefined;
 }) {
   return (
-    <div className="rounded-3xl border border-border bg-white p-6">
+    <div className="border border-border bg-white p-6">
       <p className="text-sm text-muted-foreground">{label}</p>
       <p className="mt-2 font-display text-3xl font-bold sm:text-4xl">{value}</p>
       {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
@@ -459,7 +456,7 @@ function StatCard({
 
 function FunnelRow({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-border px-4 py-3">
+    <div className="flex items-center justify-between border border-border px-4 py-3">
       <dt>{label}</dt>
       <dd className="font-semibold">{value.toLocaleString("en-IN")}</dd>
     </div>
@@ -480,7 +477,7 @@ function DataTable({
   empty: string;
 }) {
   return (
-    <section className="rounded-3xl border border-border bg-white p-6">
+    <section className="border border-border bg-white p-6">
       <h2 className="font-display text-xl font-semibold">{title}</h2>
       <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       <div className="mt-4 overflow-x-auto">

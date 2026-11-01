@@ -70,7 +70,7 @@ export function SizeChartField({
     <div className="space-y-3">
       <p className="text-sm font-medium">Size Chart</p>
       {value ? (
-        <div className="rounded-xl border border-border bg-muted/30 p-4">
+        <div className="border border-border bg-muted/30 p-4">
           <img
             src={value}
             alt="Size chart preview"
@@ -84,7 +84,7 @@ export function SizeChartField({
                 className="hidden"
                 onChange={(e) => onFile(e.target.files?.[0] ?? null)}
               />
-              <span className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-border bg-white px-4 text-sm font-medium leading-none">
+              <span className="inline-flex h-10 items-center justify-center gap-2 border border-border bg-white px-4 text-sm font-medium leading-none">
                 {uploading ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
@@ -93,12 +93,7 @@ export function SizeChartField({
                 Replace
               </span>
             </label>
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-full"
-              onClick={() => onChange("")}
-            >
+            <Button type="button" variant="outline" className="" onClick={() => onChange("")}>
               Remove
             </Button>
           </div>
@@ -111,7 +106,7 @@ export function SizeChartField({
             className="hidden"
             onChange={(e) => onFile(e.target.files?.[0] ?? null)}
           />
-          <span className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-medium leading-none">
+          <span className="inline-flex h-11 items-center justify-center gap-2 border border-border bg-white px-4 text-sm font-medium leading-none">
             {uploading ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
@@ -159,7 +154,7 @@ export function ImageUploadField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Upload or paste a public image URL"
-          className="h-11 flex-1 rounded-xl border border-border bg-white px-3 text-sm"
+          className="h-11 flex-1 border border-border bg-white px-3 text-sm"
         />
         <label className="inline-flex cursor-pointer">
           <input
@@ -168,7 +163,7 @@ export function ImageUploadField({
             className="hidden"
             onChange={(e) => onFile(e.target.files?.[0] ?? null)}
           />
-          <span className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-medium leading-none">
+          <span className="inline-flex h-11 items-center justify-center gap-2 border border-border bg-white px-4 text-sm font-medium leading-none">
             {uploading ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
@@ -178,9 +173,7 @@ export function ImageUploadField({
           </span>
         </label>
       </div>
-      {value ? (
-        <img src={value} alt="" className="mt-2 h-28 w-24 rounded-lg object-cover object-top" />
-      ) : null}
+      {value ? <img src={value} alt="" className="mt-2 h-28 w-24 object-cover object-top" /> : null}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );
@@ -212,7 +205,7 @@ export function ListField({
         }
         placeholder={placeholder}
         rows={4}
-        className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm"
+        className="w-full border border-border bg-white px-3 py-2 text-sm"
       />
       <p className="text-xs text-muted-foreground">One item per line</p>
     </div>
@@ -221,7 +214,7 @@ export function ListField({
 
 export function AdminNotice({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-border bg-white px-4 py-3 text-sm text-muted-foreground">
+    <div className="border border-border bg-white px-4 py-3 text-sm text-muted-foreground">
       {children}
     </div>
   );
@@ -241,7 +234,7 @@ export function DangerButton({
       variant="destructive"
       size="sm"
       disabled={busy}
-      className="rounded-full px-3.5"
+      className="px-3.5"
       onClick={async () => {
         if (!window.confirm("Delete this item permanently?")) return;
         setBusy(true);

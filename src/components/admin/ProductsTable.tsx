@@ -21,12 +21,12 @@ export function ProductsTable({ products }: { products: Product[] }) {
 
   return (
     <Tabs defaultValue="active" className="mt-8">
-      <TabsList className="h-10 rounded-full bg-white p-1">
-        <TabsTrigger value="active" className="rounded-full px-4">
+      <TabsList className="h-10 bg-white p-1">
+        <TabsTrigger value="active" className="px-4">
           Active
           <span className="ml-2 text-xs text-muted-foreground">{active.length}</span>
         </TabsTrigger>
-        <TabsTrigger value="archived" className="rounded-full px-4">
+        <TabsTrigger value="archived" className="px-4">
           Archived
           <span className="ml-2 text-xs text-muted-foreground">{archived.length}</span>
         </TabsTrigger>
@@ -79,11 +79,7 @@ function ProductRows({ products, empty }: { products: Product[]; empty: string }
           header: "Product",
           cell: (product) => (
             <div className="flex items-center gap-3">
-              <img
-                src={product.image}
-                alt=""
-                className="size-12 rounded-lg object-cover object-top"
-              />
+              <img src={product.image} alt="" className="size-12 object-cover object-top" />
               <div>
                 <p className="font-medium">{product.name}</p>
                 <p className="text-xs text-muted-foreground">{product.id}</p>

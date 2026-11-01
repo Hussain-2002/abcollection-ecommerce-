@@ -5,8 +5,8 @@ import bcrypt from "bcryptjs";
 
 import type { CustomerPublic } from "@/lib/commerce-types";
 import { findCustomerByEmail, setCustomerPasswordHash } from "@/lib/commerce.server";
+import { renderPasswordResetEmail } from "@/lib/email-templates";
 import { sendCustomerEmail } from "@/lib/notifications.server";
-import { SITE_NAME } from "@/lib/site";
 import { toPublicCustomer } from "@/lib/customer-auth.server";
 
 const OTP_TTL_MS = 10 * 60 * 1000;
@@ -92,13 +92,8 @@ export async function sendPasswordResetCode(emailInput: string) {
   if (!customer || customer.status !== "active") return { resetToken: "" };
 
   const code = String(randomInt(100000, 1000000));
-  const text = [
-    `Your ${SITE_NAME} password reset code is ${code}.`,
-    "",
-    "It expires in 10 minutes. If you did not ask to reset your password, you can ignore this email.",
-  ].join("\n");
-  const html = `<p>Your ${SITE_NAME} password reset code is <strong style="font-size:20px;letter-spacing:0.2em">${code}</strong>.</p><p>It expires in 10 minutes. If you did not ask to reset your password, you can ignore this email.</p>`;
-  const sent = await sendCustomerEmail(email, `${SITE_NAME} password reset code`, text, html);
+  const message = renderPasswordResetEmail(code);
+  const sent = await sendCustomerEmail(email, message.subject, message.text, message.html);
   if (!sent.ok) {
     recentSends.delete(email);
     throw Object.assign(new Error("Could not send the email. Please try again."), { status: 503 });

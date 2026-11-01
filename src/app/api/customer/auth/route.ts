@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import {
   attachCustomerSessionCookie,
@@ -8,6 +8,8 @@ import {
   signupCustomer,
 } from "@/lib/customer-auth.server";
 import { getCart, getWishlist, mergeGuestCart } from "@/lib/commerce.server";
+import { renderWelcomeEmail } from "@/lib/email-templates";
+import { sendCustomerEmail } from "@/lib/notifications.server";
 import { cartItemInputSchema, loginSchema, signupSchema } from "@/lib/commerce-types";
 import { z } from "zod";
 
@@ -36,6 +38,19 @@ export async function POST(request: Request) {
       guestCart?.length ? mergeGuestCart(customer.id, guestCart) : getCart(customer.id),
       getWishlist(customer.id),
     ]);
+
+    if (mode === "signup") {
+      after(async () => {
+        const welcome = renderWelcomeEmail(customer);
+        const sent = await sendCustomerEmail(
+          customer.email,
+          welcome.subject,
+          welcome.text,
+          welcome.html,
+        ).catch((error: unknown) => ({ ok: false as const, error }));
+        if (!sent.ok) console.error("[welcome-mail]", customer.email, sent.error);
+      });
+    }
 
     const response = NextResponse.json({ customer, cart, wishlist });
     attachCustomerSessionCookie(response, customer.id);
