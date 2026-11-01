@@ -23,6 +23,8 @@ export const bundleOfferSchema = z.object({
   active: z.boolean().default(true),
   deletedAt: z.string().trim().max(40).nullable().optional(),
   sortOrder: z.number().int().min(0).max(9999).default(0),
+  /** Bundle photos, first one is the cover. */
+  images: z.array(z.string().trim().min(1).max(500)).max(8).default([]),
 });
 
 export type BundleOffer = z.infer<typeof bundleOfferSchema>;
@@ -30,7 +32,17 @@ export type BundleOffer = z.infer<typeof bundleOfferSchema>;
 export type BundleOfferView = {
   id: string;
   title: string;
-  items: { id: string; name: string; color: string; priceLabel: string; price: number }[];
+  /** Admin-uploaded bundle photos; empty means show the item photos instead. */
+  images: string[];
+  items: {
+    id: string;
+    name: string;
+    color: string;
+    priceLabel: string;
+    price: number;
+    /** Product photo in the bundle colour. */
+    image: string;
+  }[];
   individualTotal: number;
   individualTotalLabel: string;
   bundlePrice: number;
@@ -153,12 +165,21 @@ export function toBundleOfferView(offer: BundleOffer, products: Product[]): Bund
     if (!product) return null;
     const price = parsePriceInr(product.price);
     if (!price) return null;
+    const color = bundleItemColor(offer, index);
+    const images = product.images?.length ? product.images : [product.image];
+    const colorEntry = color
+      ? product.colorImages?.find((entry) => entry.color.toLowerCase() === color.toLowerCase())
+      : undefined;
     return {
       id: product.id,
       name: product.name,
-      color: bundleItemColor(offer, index),
+      color,
       priceLabel: product.price,
       price,
+      image:
+        colorEntry?.images.find((src) => src.trim()) ||
+        images.find((src) => src.trim()) ||
+        product.image,
     };
   });
   if (items.some((item) => item == null)) return null;
@@ -179,6 +200,7 @@ export function toBundleOfferView(offer: BundleOffer, products: Product[]): Bund
   return {
     id: offer.id,
     title: offer.title,
+    images: offer.images ?? [],
     items: resolved,
     individualTotal,
     individualTotalLabel: formatInr(individualTotal),

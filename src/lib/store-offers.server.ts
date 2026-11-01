@@ -27,6 +27,7 @@ type BundleRow = {
   active: boolean;
   deleted_at: string | null;
   sort_order: number;
+  images?: string[] | null;
 };
 
 function mapRow(row: BundleRow): BundleOffer {
@@ -50,6 +51,7 @@ function mapRow(row: BundleRow): BundleOffer {
     active: row.active,
     deletedAt: row.deleted_at,
     sortOrder: row.sort_order,
+    images: row.images ?? [],
   });
 }
 
@@ -69,6 +71,7 @@ function toInsert(offer: BundleOffer) {
     active: offer.active,
     deleted_at: offer.deletedAt ?? null,
     sort_order: offer.sortOrder,
+    images: offer.images ?? [],
   };
 }
 
@@ -160,7 +163,13 @@ export async function saveBundleOffer(offer: BundleOffer, mode: "create" | "upda
           .select("*")
           .single();
   const { data, error } = await query;
-  if (error && /pricing_type|discount_percent/.test(error.message)) {
+  if (error && /images/.test(error.message) && parsed.images.length) {
+    throw new Error(
+      "Bundle photos need a database update first: run supabase/migrations/20261101170000_bundle_images.sql.",
+    );
+  }
+  // Older databases may miss newer columns (pricing, images): save the basics.
+  if (error && /pricing_type|discount_percent|images/.test(error.message)) {
     const columnFallback = {
       id: payload.id,
       title: payload.title,

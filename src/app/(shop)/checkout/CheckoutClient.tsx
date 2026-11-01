@@ -7,7 +7,8 @@ import { Loader2, Lock, RefreshCw, Truck } from "lucide-react";
 
 import { useCommerce } from "@/components/commerce/CommerceProvider";
 import { useMemberPricing } from "@/components/membership/MembershipProvider";
-import { OrderProcessingScreen } from "@/components/commerce/OrderProcessingScreen";
+import { BundleNudge } from "@/components/bundles/Bundles";
+import { OrderProcessingOverlay } from "@/components/commerce/OrderProcessingScreen";
 import { useIstefadaOffer } from "@/components/site/IstefadaOfferProvider";
 import { useCatalog } from "@/components/site/CatalogProvider";
 import { Button } from "@/components/ui/button";
@@ -609,9 +610,11 @@ export default function CheckoutClient() {
     }
   };
 
-  if (submitting && !paying) {
-    return (
-      <OrderProcessingScreen
+  // Covers the page instead of replacing it, so nothing shifts or scrolls while
+  // payment opens or the order is confirmed (including after the bag empties).
+  const processing =
+    submitting && !paying ? (
+      <OrderProcessingOverlay
         title={placing ? "Placing your order" : "Opening secure payment"}
         subtitle={
           placing
@@ -619,12 +622,11 @@ export default function CheckoutClient() {
             : "Please wait — Cashfree checkout is starting."
         }
       />
-    );
-  }
+    ) : null;
 
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="flex min-h-[calc(100svh-var(--header-h)-var(--announce-h))] items-center justify-center">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -632,588 +634,596 @@ export default function CheckoutClient() {
 
   if (!lines.length) {
     return (
-      <div className="mx-auto max-w-lg px-5 py-20 text-center">
-        <h1 className="font-display text-3xl font-normal">Nothing to checkout</h1>
-        <Button
-          asChild
-          className="mt-6 h-11 bg-teal px-8 text-xs tracking-[0.12em] text-teal-foreground uppercase"
-        >
-          <Link href="/collection">Browse Collection</Link>
-        </Button>
-      </div>
+      <>
+        {processing}
+
+        <div className="mx-auto max-w-lg px-5 py-20 text-center">
+          <h1 className="font-display text-3xl font-normal">Nothing to checkout</h1>
+          <Button
+            asChild
+            className="mt-6 h-11 bg-teal px-8 text-xs tracking-[0.12em] text-teal-foreground uppercase"
+          >
+            <Link href="/collection">Browse Collection</Link>
+          </Button>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="page-wrap max-w-6xl py-[clamp(2rem,5vw,3.5rem)] pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:pb-16">
-      <nav
-        aria-label="Checkout steps"
-        className="flex items-center gap-2 text-[0.68rem] tracking-[0.16em] uppercase"
-      >
-        <button
-          type="button"
-          onClick={openCart}
-          className="text-muted-foreground hover:text-foreground"
+    <>
+      {processing}
+      <div className="page-wrap max-w-6xl py-[clamp(2rem,5vw,3.5rem)] pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:pb-16">
+        <nav
+          aria-label="Checkout steps"
+          className="flex items-center gap-2 text-[0.68rem] tracking-[0.16em] uppercase"
         >
-          Bag
-        </button>
-        <span aria-hidden className="text-muted-foreground">
-          /
-        </span>
-        <span aria-current="step">Details</span>
-        <span aria-hidden className="text-muted-foreground">
-          /
-        </span>
-        <span className="text-muted-foreground">Payment</span>
-      </nav>
-      <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="editorial text-[clamp(2.4rem,6vw,3.6rem)] leading-none">Checkout</h1>
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Lock className="size-4" strokeWidth={1.4} aria-hidden />
-          Secure payment with Cashfree
-        </p>
-      </div>
+          <button
+            type="button"
+            onClick={openCart}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Bag
+          </button>
+          <span aria-hidden className="text-muted-foreground">
+            /
+          </span>
+          <span aria-current="step">Details</span>
+          <span aria-hidden className="text-muted-foreground">
+            /
+          </span>
+          <span className="text-muted-foreground">Payment</span>
+        </nav>
+        <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
+          <h1 className="editorial text-[clamp(2.4rem,6vw,3.6rem)] leading-none">Checkout</h1>
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Lock className="size-4" strokeWidth={1.4} aria-hidden />
+            Secure payment with Cashfree
+          </p>
+        </div>
 
-      <form
-        onSubmit={submit}
-        noValidate
-        aria-busy={submitting}
-        className="mt-8 grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)] lg:gap-12"
-      >
-        <div className="min-w-0 space-y-4">
-          {!customer ? (
-            <section className="min-w-0 border border-border bg-paper p-5 sm:p-7">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <StepTitle n={1}>Contact</StepTitle>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Checking out as a guest. No account needed.
+        <form
+          onSubmit={submit}
+          noValidate
+          aria-busy={submitting}
+          className="mt-8 grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)] lg:gap-12"
+        >
+          <div className="min-w-0 space-y-4">
+            {!customer ? (
+              <section className="min-w-0 border border-border bg-paper p-5 sm:p-7">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <StepTitle n={1}>Contact</StepTitle>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Checking out as a guest. No account needed.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      mode === "buy_now" && buyNow
+                        ? openAuth({
+                            type: "buy_now",
+                            item: buyNow,
+                            redirect: "/checkout?mode=buy_now",
+                          })
+                        : openAuth({ type: "checkout" })
+                    }
+                    className="min-h-11 text-[0.72rem] tracking-[0.16em] underline underline-offset-4 uppercase"
+                  >
+                    Have an account? Log in
+                  </button>
+                </div>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <Label htmlFor="guest-fullName">Full name</Label>
+                    <Input
+                      id="guest-fullName"
+                      autoComplete="name"
+                      required
+                      value={guestName}
+                      aria-invalid={Boolean(guestErrors.fullName)}
+                      onChange={(e) => {
+                        setGuestName(e.target.value);
+                        clearGuestError("fullName");
+                      }}
+                      className={cn("mt-1.5 h-11", guestErrors.fullName && "border-destructive")}
+                    />
+                    <FieldAlert message={guestErrors.fullName} />
+                  </div>
+                  <div>
+                    <Label htmlFor="guest-phone">Mobile number</Label>
+                    <Input
+                      id="guest-phone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel-national"
+                      required
+                      value={guestPhone}
+                      aria-invalid={Boolean(guestErrors.phone)}
+                      onChange={(e) => {
+                        setGuestPhone(e.target.value);
+                        clearGuestError("phone");
+                      }}
+                      placeholder="10-digit mobile"
+                      className={cn("mt-1.5 h-11", guestErrors.phone && "border-destructive")}
+                    />
+                    <FieldAlert message={guestErrors.phone} />
+                  </div>
+                  <div>
+                    <Label htmlFor="guest-email">Email (optional)</Label>
+                    <Input
+                      id="guest-email"
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      value={guestEmail}
+                      aria-invalid={Boolean(guestErrors.email)}
+                      onChange={(e) => {
+                        setGuestEmail(e.target.value);
+                        clearGuestError("email");
+                      }}
+                      placeholder="For your order confirmation"
+                      className={cn("mt-1.5 h-11", guestErrors.email && "border-destructive")}
+                    />
+                    <FieldAlert message={guestErrors.email} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label htmlFor="alt-phone">Alternate contact number (optional)</Label>
+                    <Input
+                      id="alt-phone"
+                      value={alternatePhone}
+                      onChange={(e) => setAlternatePhone(e.target.value)}
+                      className="mt-1.5 h-11"
+                      placeholder="Optional"
+                    />
+                  </div>
+                </div>
+                <div className="mt-5 flex items-start gap-3 border-t border-border pt-4 text-sm text-muted-foreground">
+                  <span aria-hidden className="mt-0.5 text-foreground">
+                    ✦
+                  </span>
+                  <p>
+                    Want to track every order in one place?{" "}
+                    <button
+                      type="button"
+                      onClick={() => openAuth({ type: "checkout" })}
+                      className="text-foreground underline underline-offset-4"
+                    >
+                      Create an account
+                    </button>{" "}
+                    — it&apos;s optional. You can still track this order with your order number.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    mode === "buy_now" && buyNow
-                      ? openAuth({
-                          type: "buy_now",
-                          item: buyNow,
-                          redirect: "/checkout?mode=buy_now",
-                        })
-                      : openAuth({ type: "checkout" })
-                  }
-                  className="min-h-11 text-[0.72rem] tracking-[0.16em] underline underline-offset-4 uppercase"
-                >
-                  Have an account? Log in
-                </button>
-              </div>
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <Label htmlFor="guest-fullName">Full name</Label>
-                  <Input
-                    id="guest-fullName"
-                    autoComplete="name"
-                    required
-                    value={guestName}
-                    aria-invalid={Boolean(guestErrors.fullName)}
-                    onChange={(e) => {
-                      setGuestName(e.target.value);
-                      clearGuestError("fullName");
-                    }}
-                    className={cn("mt-1.5 h-11", guestErrors.fullName && "border-destructive")}
-                  />
-                  <FieldAlert message={guestErrors.fullName} />
+              </section>
+            ) : (
+              <section className="min-w-0 border border-border bg-paper p-5 sm:p-7">
+                <div className="flex items-start justify-between gap-3">
+                  <StepTitle n={1}>Contact</StepTitle>
+                  <Link
+                    href="/account/settings"
+                    className="text-[0.72rem] tracking-[0.14em] text-muted-foreground uppercase underline-offset-4 hover:text-foreground hover:underline"
+                  >
+                    Edit
+                  </Link>
                 </div>
-                <div>
-                  <Label htmlFor="guest-phone">Mobile number</Label>
-                  <Input
-                    id="guest-phone"
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel-national"
-                    required
-                    value={guestPhone}
-                    aria-invalid={Boolean(guestErrors.phone)}
-                    onChange={(e) => {
-                      setGuestPhone(e.target.value);
-                      clearGuestError("phone");
-                    }}
-                    placeholder="10-digit mobile"
-                    className={cn("mt-1.5 h-11", guestErrors.phone && "border-destructive")}
-                  />
-                  <FieldAlert message={guestErrors.phone} />
+                <div className="mt-4 text-sm">
+                  <p className="font-medium">{customer.fullName}</p>
+                  <p className="mt-0.5 break-all text-muted-foreground">
+                    {customer.email} · {customer.phone}
+                  </p>
                 </div>
-                <div>
-                  <Label htmlFor="guest-email">Email (optional)</Label>
-                  <Input
-                    id="guest-email"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    value={guestEmail}
-                    aria-invalid={Boolean(guestErrors.email)}
-                    onChange={(e) => {
-                      setGuestEmail(e.target.value);
-                      clearGuestError("email");
-                    }}
-                    placeholder="For your order confirmation"
-                    className={cn("mt-1.5 h-11", guestErrors.email && "border-destructive")}
-                  />
-                  <FieldAlert message={guestErrors.email} />
-                </div>
-                <div className="sm:col-span-2">
+                <div className="mt-5">
                   <Label htmlFor="alt-phone">Alternate contact number (optional)</Label>
                   <Input
                     id="alt-phone"
                     value={alternatePhone}
                     onChange={(e) => setAlternatePhone(e.target.value)}
-                    className="mt-1.5 h-11"
-                    placeholder="Optional"
+                    className="mt-1.5"
+                    inputMode="tel"
+                    placeholder="In case we can't reach you"
                   />
                 </div>
-              </div>
-              <div className="mt-5 flex items-start gap-3 border-t border-border pt-4 text-sm text-muted-foreground">
-                <span aria-hidden className="mt-0.5 text-foreground">
-                  ✦
-                </span>
-                <p>
-                  Want to track every order in one place?{" "}
-                  <button
-                    type="button"
-                    onClick={() => openAuth({ type: "checkout" })}
-                    className="text-foreground underline underline-offset-4"
-                  >
-                    Create an account
-                  </button>{" "}
-                  — it&apos;s optional. You can still track this order with your order number.
-                </p>
-              </div>
-            </section>
-          ) : (
+              </section>
+            )}
+
             <section className="min-w-0 border border-border bg-paper p-5 sm:p-7">
               <div className="flex items-start justify-between gap-3">
-                <StepTitle n={1}>Contact</StepTitle>
-                <Link
-                  href="/account/settings"
-                  className="text-[0.72rem] tracking-[0.14em] text-muted-foreground uppercase underline-offset-4 hover:text-foreground hover:underline"
-                >
-                  Edit
-                </Link>
+                <StepTitle n={2}>Delivery</StepTitle>
+                {addresses.length ? (
+                  <button
+                    type="button"
+                    className="text-[0.72rem] tracking-[0.14em] text-muted-foreground uppercase underline-offset-4 hover:text-foreground hover:underline"
+                    onClick={() => setUseNewAddress((v) => !v)}
+                  >
+                    {useNewAddress ? "Use a saved address" : "+ New address"}
+                  </button>
+                ) : null}
               </div>
-              <div className="mt-4 text-sm">
-                <p className="font-medium">{customer.fullName}</p>
-                <p className="mt-0.5 break-all text-muted-foreground">
-                  {customer.email} · {customer.phone}
-                </p>
-              </div>
-              <div className="mt-5">
-                <Label htmlFor="alt-phone">Alternate contact number (optional)</Label>
-                <Input
-                  id="alt-phone"
-                  value={alternatePhone}
-                  onChange={(e) => setAlternatePhone(e.target.value)}
-                  className="mt-1.5"
-                  inputMode="tel"
-                  placeholder="In case we can't reach you"
-                />
-              </div>
-            </section>
-          )}
 
-          <section className="min-w-0 border border-border bg-paper p-5 sm:p-7">
-            <div className="flex items-start justify-between gap-3">
-              <StepTitle n={2}>Delivery</StepTitle>
-              {addresses.length ? (
-                <button
-                  type="button"
-                  className="text-[0.72rem] tracking-[0.14em] text-muted-foreground uppercase underline-offset-4 hover:text-foreground hover:underline"
-                  onClick={() => setUseNewAddress((v) => !v)}
-                >
-                  {useNewAddress ? "Use a saved address" : "+ New address"}
-                </button>
-              ) : null}
-            </div>
-
-            {!useNewAddress && addresses.length ? (
-              <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
-                {addresses.map((address) => {
-                  const selected = selectedAddressId === address.id;
-                  return (
-                    <label
-                      key={address.id}
-                      className={cn(
-                        "flex cursor-pointer gap-3 border p-4 text-sm transition-colors duration-200",
-                        selected
-                          ? "border-ink bg-background"
-                          : "border-border hover:border-foreground/40",
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="saved-address"
-                        className="sr-only"
-                        checked={selected}
-                        onChange={() => setSelectedAddressId(address.id)}
-                      />
-                      <span
-                        aria-hidden
+              {!useNewAddress && addresses.length ? (
+                <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+                  {addresses.map((address) => {
+                    const selected = selectedAddressId === address.id;
+                    return (
+                      <label
+                        key={address.id}
                         className={cn(
-                          "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
-                          selected ? "border-ink" : "border-input",
+                          "flex cursor-pointer gap-3 border p-4 text-sm transition-colors duration-200",
+                          selected
+                            ? "border-ink bg-background"
+                            : "border-border hover:border-foreground/40",
                         )}
                       >
-                        <span
-                          className={cn(
-                            "size-2 rounded-full bg-ink transition-transform duration-200",
-                            selected ? "scale-100" : "scale-0",
-                          )}
+                        <input
+                          type="radio"
+                          name="saved-address"
+                          className="sr-only"
+                          checked={selected}
+                          onChange={() => setSelectedAddressId(address.id)}
                         />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block font-medium">{address.label}</span>
-                        <span className="mt-1 block text-muted-foreground">
-                          {address.line1}
-                          {address.line2 ? `, ${address.line2}` : ""}
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
+                            selected ? "border-ink" : "border-input",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "size-2 rounded-full bg-ink transition-transform duration-200",
+                              selected ? "scale-100" : "scale-0",
+                            )}
+                          />
                         </span>
-                        <span className="block text-muted-foreground">
-                          {address.city}, {address.state} {address.pincode}
-                        </span>
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {Object.keys(fieldErrors).length ? (
-                  <p className="text-sm text-destructive sm:col-span-2" role="alert">
-                    {error}
-                  </p>
-                ) : null}
-                <div className="sm:col-span-2">
-                  <Label htmlFor="label">Label</Label>
-                  <Input
-                    id="label"
-                    required
-                    value={label}
-                    aria-invalid={Boolean(fieldErrors.label)}
-                    onChange={(e) => {
-                      setLabel(e.target.value);
-                      clearFieldError("label");
-                    }}
-                    placeholder="Home"
-                    className={`mt-1.5 h-11 ${fieldErrors.label ? "border-destructive" : ""}`}
-                  />
-                  <FieldAlert message={fieldErrors.label} />
-                </div>
-                <div className="sm:col-span-2">
-                  <Label htmlFor="line1">Address line 1</Label>
-                  <Input
-                    id="line1"
-                    required
-                    value={line1}
-                    aria-invalid={Boolean(fieldErrors.line1)}
-                    onChange={(e) => {
-                      setLine1(e.target.value);
-                      clearFieldError("line1");
-                    }}
-                    className={`mt-1.5 h-11 ${fieldErrors.line1 ? "border-destructive" : ""}`}
-                  />
-                  <FieldAlert message={fieldErrors.line1} />
-                </div>
-                <div className="sm:col-span-2">
-                  <Label htmlFor="line2">Address line 2 (optional)</Label>
-                  <Input
-                    id="line2"
-                    value={line2}
-                    onChange={(e) => setLine2(e.target.value)}
-                    className="mt-1.5 h-11"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    required
-                    value={city}
-                    aria-invalid={Boolean(fieldErrors.city)}
-                    onChange={(e) => {
-                      setCity(e.target.value);
-                      clearFieldError("city");
-                    }}
-                    className={`mt-1.5 h-11 ${fieldErrors.city ? "border-destructive" : ""}`}
-                  />
-                  <FieldAlert message={fieldErrors.city} />
-                </div>
-                <div>
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    required
-                    value={state}
-                    aria-invalid={Boolean(fieldErrors.state)}
-                    onChange={(e) => {
-                      setState(e.target.value);
-                      clearFieldError("state");
-                    }}
-                    className={`mt-1.5 h-11 ${fieldErrors.state ? "border-destructive" : ""}`}
-                  />
-                  <FieldAlert message={fieldErrors.state} />
-                </div>
-                <div>
-                  <Label htmlFor="pincode">PIN code</Label>
-                  <Input
-                    id="pincode"
-                    required
-                    inputMode="numeric"
-                    value={pincode}
-                    aria-invalid={Boolean(fieldErrors.pincode)}
-                    onChange={(e) => {
-                      setPincode(e.target.value);
-                      clearFieldError("pincode");
-                    }}
-                    className={`mt-1.5 h-11 ${fieldErrors.pincode ? "border-destructive" : ""}`}
-                  />
-                  <FieldAlert message={fieldErrors.pincode} />
-                </div>
-              </div>
-            )}
-          </section>
-
-          <section className="min-w-0 border border-border bg-paper p-5 sm:p-7">
-            <StepTitle n={3}>Payment</StepTitle>
-            <div className="mt-4 flex items-start gap-3 text-sm">
-              <Lock className="mt-0.5 size-4 shrink-0" strokeWidth={1.4} aria-hidden />
-              <p className="text-muted-foreground">
-                Pay by <span className="text-foreground">UPI, card or netbanking</span> in
-                Cashfree&apos;s secure window. Your order is confirmed and stock is held only once
-                payment succeeds.
-              </p>
-            </div>
-          </section>
-        </div>
-
-        <aside className="h-fit min-w-0 border border-border bg-paper p-5 sm:p-7 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)]">
-          <h2 className="flex items-baseline justify-between gap-3">
-            <span className="text-[0.74rem] font-medium tracking-[0.18em] uppercase">
-              Order summary
-            </span>
-            <span className="text-sm text-muted-foreground">
-              {lines.reduce((sum, line) => sum + line.quantity, 0)} item
-              {lines.reduce((sum, line) => sum + line.quantity, 0) === 1 ? "" : "s"}
-            </span>
-          </h2>
-          <ul className="mt-5 space-y-4">
-            {member.lines.map((line) => (
-              <li key={line.key} className="flex gap-3.5 text-sm">
-                <span className="relative shrink-0">
-                  <img
-                    src={cdnImageUrl(line.image)}
-                    alt=""
-                    className="aspect-[2/3] w-14 bg-muted object-cover"
-                  />
-                  <span className="absolute -top-2 -right-2 grid size-5 place-items-center rounded-full bg-ink text-[0.62rem] text-white">
-                    {line.quantity}
-                  </span>
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[0.8rem] font-medium tracking-[0.08em] uppercase">
-                    {line.name}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {line.color} · {line.size}
-                  </p>
-                  <p className="mt-1 font-semibold text-teal">
-                    {line.isMemberPriced ? (
-                      <span className="flex flex-col">
-                        <span className="text-xs font-normal text-muted-foreground line-through">
-                          {formatInr(line.regularUnitPrice * line.quantity)}
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          {formatInr(line.lineTotal)}
-                          <span className="bg-ink px-1 py-0.5 text-[0.52rem] font-normal tracking-[0.14em] text-white uppercase">
-                            Insider
+                        <span className="min-w-0">
+                          <span className="block font-medium">{address.label}</span>
+                          <span className="mt-1 block text-muted-foreground">
+                            {address.line1}
+                            {address.line2 ? `, ${address.line2}` : ""}
+                          </span>
+                          <span className="block text-muted-foreground">
+                            {address.city}, {address.state} {address.pincode}
                           </span>
                         </span>
-                      </span>
-                    ) : hasOffer && !couponQuote?.ok ? (
-                      <span className="flex flex-col">
-                        <span className="text-xs font-normal text-muted-foreground line-through">
-                          {formatInr(line.lineTotal)}
-                        </span>
-                        <span>
-                          {formatInr(
-                            (line.unitPrice - istefadaUnitOff(line.unitPrice)) * line.quantity,
-                          )}
-                        </span>
-                      </span>
-                    ) : (
-                      formatInr(line.lineTotal)
-                    )}
-                  </p>
+                      </label>
+                    );
+                  })}
                 </div>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-5 space-y-2 border-t border-border pt-4 text-sm">
-            {!couponOpen && !couponInput ? (
-              <button
-                type="button"
-                onClick={() => setCouponOpen(true)}
-                className="pb-1 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
-              >
-                Have a coupon code?
-              </button>
-            ) : (
-              <div className="flex gap-2">
-                <Input
-                  value={couponInput}
-                  onChange={(e) => {
-                    setCouponInput(e.target.value);
-                    setCouponQuote(null);
-                  }}
-                  placeholder="Coupon code"
-                  className="h-11"
-                />
+              ) : (
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  {Object.keys(fieldErrors).length ? (
+                    <p className="text-sm text-destructive sm:col-span-2" role="alert">
+                      {error}
+                    </p>
+                  ) : null}
+                  <div className="sm:col-span-2">
+                    <Label htmlFor="label">Label</Label>
+                    <Input
+                      id="label"
+                      required
+                      value={label}
+                      aria-invalid={Boolean(fieldErrors.label)}
+                      onChange={(e) => {
+                        setLabel(e.target.value);
+                        clearFieldError("label");
+                      }}
+                      placeholder="Home"
+                      className={`mt-1.5 h-11 ${fieldErrors.label ? "border-destructive" : ""}`}
+                    />
+                    <FieldAlert message={fieldErrors.label} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label htmlFor="line1">Address line 1</Label>
+                    <Input
+                      id="line1"
+                      required
+                      value={line1}
+                      aria-invalid={Boolean(fieldErrors.line1)}
+                      onChange={(e) => {
+                        setLine1(e.target.value);
+                        clearFieldError("line1");
+                      }}
+                      className={`mt-1.5 h-11 ${fieldErrors.line1 ? "border-destructive" : ""}`}
+                    />
+                    <FieldAlert message={fieldErrors.line1} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label htmlFor="line2">Address line 2 (optional)</Label>
+                    <Input
+                      id="line2"
+                      value={line2}
+                      onChange={(e) => setLine2(e.target.value)}
+                      className="mt-1.5 h-11"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      required
+                      value={city}
+                      aria-invalid={Boolean(fieldErrors.city)}
+                      onChange={(e) => {
+                        setCity(e.target.value);
+                        clearFieldError("city");
+                      }}
+                      className={`mt-1.5 h-11 ${fieldErrors.city ? "border-destructive" : ""}`}
+                    />
+                    <FieldAlert message={fieldErrors.city} />
+                  </div>
+                  <div>
+                    <Label htmlFor="state">State</Label>
+                    <Input
+                      id="state"
+                      required
+                      value={state}
+                      aria-invalid={Boolean(fieldErrors.state)}
+                      onChange={(e) => {
+                        setState(e.target.value);
+                        clearFieldError("state");
+                      }}
+                      className={`mt-1.5 h-11 ${fieldErrors.state ? "border-destructive" : ""}`}
+                    />
+                    <FieldAlert message={fieldErrors.state} />
+                  </div>
+                  <div>
+                    <Label htmlFor="pincode">PIN code</Label>
+                    <Input
+                      id="pincode"
+                      required
+                      inputMode="numeric"
+                      value={pincode}
+                      aria-invalid={Boolean(fieldErrors.pincode)}
+                      onChange={(e) => {
+                        setPincode(e.target.value);
+                        clearFieldError("pincode");
+                      }}
+                      className={`mt-1.5 h-11 ${fieldErrors.pincode ? "border-destructive" : ""}`}
+                    />
+                    <FieldAlert message={fieldErrors.pincode} />
+                  </div>
+                </div>
+              )}
+            </section>
+
+            <section className="min-w-0 border border-border bg-paper p-5 sm:p-7">
+              <StepTitle n={3}>Payment</StepTitle>
+              <div className="mt-4 flex items-start gap-3 text-sm">
+                <Lock className="mt-0.5 size-4 shrink-0" strokeWidth={1.4} aria-hidden />
+                <p className="text-muted-foreground">
+                  Pay by <span className="text-foreground">UPI, card or netbanking</span> in
+                  Cashfree&apos;s secure window. Your order is confirmed and stock is held only once
+                  payment succeeds.
+                </p>
+              </div>
+            </section>
+          </div>
+
+          <aside className="h-fit min-w-0 border border-border bg-paper p-5 sm:p-7 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)]">
+            <h2 className="flex items-baseline justify-between gap-3">
+              <span className="text-[0.74rem] font-medium tracking-[0.18em] uppercase">
+                Order summary
+              </span>
+              <span className="text-sm text-muted-foreground">
+                {lines.reduce((sum, line) => sum + line.quantity, 0)} item
+                {lines.reduce((sum, line) => sum + line.quantity, 0) === 1 ? "" : "s"}
+              </span>
+            </h2>
+            <ul className="mt-5 space-y-4">
+              {member.lines.map((line) => (
+                <li key={line.key} className="flex gap-3.5 text-sm">
+                  <span className="relative shrink-0">
+                    <img
+                      src={cdnImageUrl(line.image)}
+                      alt=""
+                      className="aspect-[2/3] w-14 bg-muted object-cover"
+                    />
+                    <span className="absolute -top-2 -right-2 grid size-5 place-items-center rounded-full bg-ink text-[0.62rem] text-white">
+                      {line.quantity}
+                    </span>
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[0.8rem] font-medium tracking-[0.08em] uppercase">
+                      {line.name}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {line.color} · {line.size}
+                    </p>
+                    <p className="mt-1 font-semibold text-teal">
+                      {line.isMemberPriced ? (
+                        <span className="flex flex-col">
+                          <span className="text-xs font-normal text-muted-foreground line-through">
+                            {formatInr(line.regularUnitPrice * line.quantity)}
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            {formatInr(line.lineTotal)}
+                            <span className="bg-ink px-1 py-0.5 text-[0.52rem] font-normal tracking-[0.14em] text-white uppercase">
+                              Insider
+                            </span>
+                          </span>
+                        </span>
+                      ) : hasOffer && !couponQuote?.ok ? (
+                        <span className="flex flex-col">
+                          <span className="text-xs font-normal text-muted-foreground line-through">
+                            {formatInr(line.lineTotal)}
+                          </span>
+                          <span>
+                            {formatInr(
+                              (line.unitPrice - istefadaUnitOff(line.unitPrice)) * line.quantity,
+                            )}
+                          </span>
+                        </span>
+                      ) : (
+                        formatInr(line.lineTotal)
+                      )}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {mode === "cart" ? <BundleNudge lines={lines} className="mt-5" /> : null}
+            <div className="mt-5 space-y-2 border-t border-border pt-4 text-sm">
+              {!couponOpen && !couponInput ? (
+                <button
+                  type="button"
+                  onClick={() => setCouponOpen(true)}
+                  className="pb-1 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                >
+                  Have a coupon code?
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    value={couponInput}
+                    onChange={(e) => {
+                      setCouponInput(e.target.value);
+                      setCouponQuote(null);
+                    }}
+                    placeholder="Coupon code"
+                    className="h-11"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={couponBusy || !couponInput.trim()}
+                    onClick={() => void applyCoupon()}
+                    className="h-11 shrink-0"
+                  >
+                    {couponBusy ? <Loader2 className="size-4 animate-spin" /> : "Apply"}
+                  </Button>
+                </div>
+              )}
+              {couponQuote && !couponQuote.ok ? (
+                <p className="text-xs text-destructive">
+                  {couponQuote.error || "This coupon is not valid."}
+                </p>
+              ) : null}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span>{formatInr(subtotal)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Shipping</span>
+                <span>Free</span>
+              </div>
+              {memberSavings > 0 ? (
+                <div className="flex justify-between">
+                  <span>AB Insider prices</span>
+                  <span>-{formatInr(memberSavings)}</span>
+                </div>
+              ) : null}
+              {couponSavings > 0 ? (
+                <div className="flex justify-between text-teal">
+                  <span>{previewCode || "Discount"}</span>
+                  <span>-{formatInr(couponSavings)}</span>
+                </div>
+              ) : null}
+              {bundleSavings > 0 ? (
+                <div className="flex justify-between text-teal">
+                  <span>{appliedBundle?.title || "Bundle"}</span>
+                  <span>-{formatInr(bundleSavings)}</span>
+                </div>
+              ) : null}
+              <div className="flex justify-between text-base font-bold">
+                <span>Total</span>
+                <span className="text-teal">{formatInr(priceNotice?.total ?? total)}</span>
+              </div>
+            </div>
+            {priceNotice ? (
+              <div className="mt-4 border border-ink bg-paper p-4 text-sm" role="alert">
+                <p className="font-medium">Your total has changed</p>
+                <p className="mt-1 text-muted-foreground">
+                  Prices were updated since you opened checkout (for example, a membership ended or
+                  a price changed). The new total is{" "}
+                  <b className="font-medium text-foreground">{formatInr(priceNotice.total)}</b>. Pay
+                  below to continue at this price.
+                </p>
+              </div>
+            ) : null}
+            {error ? (
+              <p className="mt-4 text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            ) : null}
+            {issues.length ? (
+              <>
+                <ul className="mt-3 space-y-2 text-sm text-destructive" role="alert">
+                  {issues.map((issue) => (
+                    <li
+                      key={`${issue.key}-${issue.type}`}
+                      className="border border-destructive/30 bg-background px-3 py-2"
+                    >
+                      <p className="font-medium">{formatCartIssue(issue)}</p>
+                      <p className="mt-1 text-xs leading-relaxed">{issue.message}</p>
+                    </li>
+                  ))}
+                </ul>
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={couponBusy || !couponInput.trim()}
-                  onClick={() => void applyCoupon()}
-                  className="h-11 shrink-0"
+                  onClick={openCart}
+                  className="mt-3 h-11 w-full text-xs font-semibold tracking-[0.12em] uppercase"
                 >
-                  {couponBusy ? <Loader2 className="size-4 animate-spin" /> : "Apply"}
+                  Review cart
                 </Button>
-              </div>
-            )}
-            {couponQuote && !couponQuote.ok ? (
-              <p className="text-xs text-destructive">
-                {couponQuote.error || "This coupon is not valid."}
-              </p>
-            ) : null}
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span>{formatInr(subtotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Shipping</span>
-              <span>Free</span>
-            </div>
-            {memberSavings > 0 ? (
-              <div className="flex justify-between">
-                <span>AB Insider prices</span>
-                <span>-{formatInr(memberSavings)}</span>
-              </div>
-            ) : null}
-            {couponSavings > 0 ? (
-              <div className="flex justify-between text-teal">
-                <span>{previewCode || "Discount"}</span>
-                <span>-{formatInr(couponSavings)}</span>
-              </div>
-            ) : null}
-            {bundleSavings > 0 ? (
-              <div className="flex justify-between text-teal">
-                <span>{appliedBundle?.title || "Bundle"}</span>
-                <span>-{formatInr(bundleSavings)}</span>
-              </div>
-            ) : null}
-            <div className="flex justify-between text-base font-bold">
-              <span>Total</span>
-              <span className="text-teal">{formatInr(priceNotice?.total ?? total)}</span>
-            </div>
-          </div>
-          {priceNotice ? (
-            <div className="mt-4 border border-ink bg-paper p-4 text-sm" role="alert">
-              <p className="font-medium">Your total has changed</p>
-              <p className="mt-1 text-muted-foreground">
-                Prices were updated since you opened checkout (for example, a membership ended or a
-                price changed). The new total is{" "}
-                <b className="font-medium text-foreground">{formatInr(priceNotice.total)}</b>. Pay
-                below to continue at this price.
-              </p>
-            </div>
-          ) : null}
-          {error ? (
-            <p className="mt-4 text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
-          {issues.length ? (
-            <>
-              <ul className="mt-3 space-y-2 text-sm text-destructive" role="alert">
-                {issues.map((issue) => (
-                  <li
-                    key={`${issue.key}-${issue.type}`}
-                    className="border border-destructive/30 bg-background px-3 py-2"
-                  >
-                    <p className="font-medium">{formatCartIssue(issue)}</p>
-                    <p className="mt-1 text-xs leading-relaxed">{issue.message}</p>
-                  </li>
-                ))}
-              </ul>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={openCart}
-                className="mt-3 h-11 w-full text-xs font-semibold tracking-[0.12em] uppercase"
-              >
-                Review cart
-              </Button>
-            </>
-          ) : null}
-          <Button
-            ref={payRef}
-            type="submit"
-            disabled={submitting}
-            className="mt-6 h-13 w-full bg-ink text-[0.78rem] font-normal tracking-[0.18em] text-white uppercase hover:bg-[#333]"
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="mr-2 size-4 animate-spin" />
-                {paying ? "Waiting for payment..." : "Confirming payment..."}
               </>
-            ) : total > 0 ? (
-              payLabel
-            ) : (
-              "Place order"
+            ) : null}
+            <Button
+              ref={payRef}
+              type="submit"
+              disabled={submitting}
+              className="mt-6 h-13 w-full bg-ink text-[0.78rem] font-normal tracking-[0.18em] text-white uppercase hover:bg-[#333]"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  {paying ? "Waiting for payment..." : "Confirming payment..."}
+                </>
+              ) : total > 0 ? (
+                payLabel
+              ) : (
+                "Place order"
+              )}
+            </Button>
+            <ul className="mt-5 grid gap-2 border-t border-border pt-4 text-xs text-muted-foreground">
+              <li className="flex items-center gap-2.5">
+                <Lock className="size-3.5 shrink-0" strokeWidth={1.4} aria-hidden />
+                Secure prepaid checkout by Cashfree
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Truck className="size-3.5 shrink-0" strokeWidth={1.4} aria-hidden />
+                Free shipping · dispatch in 2–3 business days
+              </li>
+              <li className="flex items-center gap-2.5">
+                <RefreshCw className="size-3.5 shrink-0" strokeWidth={1.4} aria-hidden />
+                Exchange on defects or wrong items within 2 days
+              </li>
+            </ul>
+          </aside>
+          <div
+            className={cn(
+              "fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-4 pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur-md transition-transform duration-200 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden",
+              payInView ? "pointer-events-none translate-y-full" : "translate-y-0",
             )}
-          </Button>
-          <ul className="mt-5 grid gap-2 border-t border-border pt-4 text-xs text-muted-foreground">
-            <li className="flex items-center gap-2.5">
-              <Lock className="size-3.5 shrink-0" strokeWidth={1.4} aria-hidden />
-              Secure prepaid checkout by Cashfree
-            </li>
-            <li className="flex items-center gap-2.5">
-              <Truck className="size-3.5 shrink-0" strokeWidth={1.4} aria-hidden />
-              Free shipping · dispatch in 2–3 business days
-            </li>
-            <li className="flex items-center gap-2.5">
-              <RefreshCw className="size-3.5 shrink-0" strokeWidth={1.4} aria-hidden />
-              Exchange on defects or wrong items within 2 days
-            </li>
-          </ul>
-        </aside>
-        <div
-          className={cn(
-            "fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-4 pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur-md transition-transform duration-200 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden",
-            payInView ? "pointer-events-none translate-y-full" : "translate-y-0",
-          )}
-          aria-hidden={payInView}
-        >
-          <Button
-            type="submit"
-            disabled={submitting}
-            className="h-12 w-full bg-teal text-sm font-semibold tracking-[0.08em] text-teal-foreground uppercase"
+            aria-hidden={payInView}
           >
-            {submitting
-              ? paying
-                ? "Waiting for payment..."
-                : "Confirming payment..."
-              : total > 0
-                ? payLabel
-                : "Place order"}
-          </Button>
-        </div>
-      </form>
-    </div>
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="h-12 w-full bg-teal text-sm font-semibold tracking-[0.08em] text-teal-foreground uppercase"
+            >
+              {submitting
+                ? paying
+                  ? "Waiting for payment..."
+                  : "Confirming payment..."
+                : total > 0
+                  ? payLabel
+                  : "Place order"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </>
   );
 }

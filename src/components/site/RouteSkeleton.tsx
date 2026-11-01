@@ -66,7 +66,7 @@ export function RouteSkeleton({
 
   if (variant === "form") {
     return (
-      <div className="mx-auto max-w-5xl px-5 py-12 sm:px-8 sm:py-16">
+      <div className="mx-auto min-h-[100svh] max-w-5xl px-5 py-12 sm:px-8 sm:py-16">
         <div className="h-10 w-56 skeleton" />
         <div className="mt-3 h-4 w-80 max-w-full skeleton" />
         <div className="mt-10 space-y-4">

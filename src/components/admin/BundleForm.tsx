@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { ImagePlus, Loader2, Plus, Star, Trash2, X } from "lucide-react";
+
+import { uploadAdminImage } from "@/components/admin/AdminFields";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -28,6 +30,7 @@ const emptyBundle = (): BundleOffer => ({
   endsAt: "",
   active: true,
   sortOrder: 0,
+  images: [],
 });
 
 function nextBundleLine(products: Product[], existing: { productId: string; color: string }[]) {
@@ -285,6 +288,11 @@ export function BundleForm({
           </label>
         </div>
 
+        <BundleImagesField
+          images={form.images ?? []}
+          onChange={(images) => setForm((prev) => ({ ...prev, images }))}
+        />
+
         <label className="flex items-center gap-3 text-sm">
           <Checkbox
             checked={form.active}
@@ -438,5 +446,125 @@ export function BundleForm({
         </div>
       </form>
     </Card>
+  );
+}
+
+/** Bundle photos: upload several, first is the cover shown on cards. */
+function BundleImagesField({
+  images,
+  onChange,
+}: {
+  images: string[];
+  onChange: (images: string[]) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+  const [url, setUrl] = useState("");
+
+  const upload = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setUploading(true);
+    setError("");
+    try {
+      const room = Math.max(0, 8 - images.length);
+      const uploaded: string[] = [];
+      for (const file of Array.from(files).slice(0, room)) {
+        uploaded.push(await uploadAdminImage(file));
+      }
+      onChange([...images, ...uploaded]);
+      if (files.length > room) setError("A bundle can have up to 8 photos.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3 border border-border p-4">
+      <div>
+        <p className="text-sm font-medium">Bundle photos</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Show what's in the bundle, e.g. all pieces laid out together. The first photo is the cover
+          on the shop page and product pages. Up to 8. Without photos, the product photos are used.
+        </p>
+      </div>
+      {images.length ? (
+        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {images.map((src, index) => (
+            <li key={`${src}-${index}`} className="relative">
+              <img src={src} alt="" className="aspect-[4/5] w-full bg-muted object-cover" />
+              {index === 0 ? (
+                <span className="absolute bottom-1 left-1 bg-ink px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-white uppercase">
+                  Cover
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  title="Make cover"
+                  aria-label="Make this the cover photo"
+                  onClick={() => onChange([src, ...images.filter((_, i) => i !== index)])}
+                  className="absolute bottom-1 left-1 grid size-7 place-items-center bg-white/90"
+                >
+                  <Star className="size-3.5" />
+                </button>
+              )}
+              <button
+                type="button"
+                aria-label="Remove photo"
+                onClick={() => onChange(images.filter((_, i) => i !== index))}
+                className="absolute top-1 right-1 grid size-7 place-items-center bg-white/90"
+              >
+                <X className="size-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <label className="inline-flex cursor-pointer">
+          <input
+            type="file"
+            multiple
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            disabled={uploading || images.length >= 8}
+            onChange={(event) => {
+              void upload(event.target.files);
+              event.target.value = "";
+            }}
+          />
+          <span className="inline-flex h-11 items-center justify-center gap-2 border border-border bg-white px-4 text-sm font-medium">
+            {uploading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <ImagePlus className="size-4" />
+            )}
+            Upload photos
+          </span>
+        </label>
+        <div className="flex flex-1 gap-2">
+          <Input
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            placeholder="…or paste an image URL"
+            className="h-11 bg-white"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11"
+            disabled={!url.trim() || images.length >= 8}
+            onClick={() => {
+              onChange([...images, url.trim()]);
+              setUrl("");
+            }}
+          >
+            Add
+          </Button>
+        </div>
+      </div>
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
   );
 }

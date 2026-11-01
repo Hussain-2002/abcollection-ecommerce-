@@ -5,6 +5,7 @@ import { ShopGrid } from "@/components/site/ShopGrid";
 import { getProducts } from "@/lib/catalog.server";
 import { catalogImageUrl } from "@/lib/media";
 import { JsonLd, breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
+import { getActiveBundleViews } from "@/lib/store-offers.server";
 
 export const revalidate = 60;
 
@@ -17,7 +18,10 @@ export const metadata = buildPageMetadata({
 });
 
 export default async function CollectionPage() {
-  const products = await getProducts();
+  const [products, bundles] = await Promise.all([
+    getProducts(),
+    getActiveBundleViews().catch(() => []),
+  ]);
 
   return (
     <>
@@ -51,7 +55,7 @@ export default async function CollectionPage() {
         </div>
       </section>
 
-      <ShopGrid products={products} />
+      <ShopGrid products={products} bundles={bundles} />
     </>
   );
 }

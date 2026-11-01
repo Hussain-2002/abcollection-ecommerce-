@@ -7,6 +7,7 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 
 import { useCommerce } from "@/components/commerce/CommerceProvider";
 import { useMemberPricing } from "@/components/membership/MembershipProvider";
+import { BundleNudge } from "@/components/bundles/Bundles";
 import { ColorSwatchRow } from "@/components/site/ColorSwatchRow";
 import { useIstefadaOffer } from "@/components/site/IstefadaOfferProvider";
 import { useCatalog } from "@/components/site/CatalogProvider";
@@ -190,6 +191,7 @@ export default function CartPage() {
                 </article>
               );
             })}
+            <BundleNudge lines={lines} />
           </div>
 
           <aside className="h-fit border border-border bg-paper p-6 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)]">

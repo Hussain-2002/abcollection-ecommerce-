@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { CART_MAX_QUANTITY } from "@/lib/commerce-constants";
 import { formatInr, parsePriceInr } from "@/lib/price";
 import { useMemberPricing } from "@/components/membership/MembershipProvider";
+import { BundleNudge } from "@/components/bundles/Bundles";
 import { resolveIstefadaDiscount } from "@/lib/istefada-offer";
 import type { BundleOfferView } from "@/lib/store-offers";
 
@@ -147,6 +148,7 @@ export function CartDrawer() {
                   />
                 ))}
               </ul>
+              <BundleNudge lines={lines} className="mt-5" />
               {suggestions.length ? (
                 <section
                   className="mt-6 border-t border-border pt-5"

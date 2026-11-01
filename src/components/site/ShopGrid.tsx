@@ -1,12 +1,14 @@
 "use client";
 
 import { SlidersHorizontal, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 import { Reveal } from "@/components/Reveal";
+import { BundleProductCard } from "@/components/bundles/Bundles";
 import { ProductCard } from "@/components/site/ProductCard";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import type { Product } from "@/lib/catalog-types";
+import type { BundleOfferView } from "@/lib/store-offers";
 import { variantHasStock } from "@/lib/inventory";
 import { parsePriceInr } from "@/lib/price";
 import { colorSwatchClass } from "@/lib/product-colors";
@@ -28,7 +30,13 @@ function sizeRank(size: string) {
 }
 
 /** Product listing with a filter sheet (colour, size, stock), sort and a grid density toggle. */
-export function ShopGrid({ products }: { products: Product[] }) {
+export function ShopGrid({
+  products,
+  bundles = [],
+}: {
+  products: Product[];
+  bundles?: BundleOfferView[];
+}) {
   const [colors, setColors] = useState<string[]>([]);
   const [sizes, setSizes] = useState<string[]>([]);
   const [inStockOnly, setInStockOnly] = useState(false);
@@ -73,6 +81,13 @@ export function ShopGrid({ products }: { products: Product[] }) {
   }, [colors, inStockOnly, products, sizes, sort]);
 
   const activeCount = colors.length + sizes.length + (inStockOnly ? 1 : 0);
+  // Bundles show in the unfiltered, featured view only; filters are about single pieces.
+  const showBundles = bundles.length > 0 && activeCount === 0 && sort === "featured";
+  const bundleSlot = Math.min(results.length, density === "compact" ? 4 : 3);
+  const cardSizes =
+    density === "compact"
+      ? "(min-width: 900px) 24vw, 48vw"
+      : "(min-width: 900px) 32vw, (min-width: 640px) 48vw, 96vw";
   const toggle = (list: string[], value: string) =>
     list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
   const clearAll = () => {
@@ -151,19 +166,32 @@ export function ShopGrid({ products }: { products: Product[] }) {
             )}
           >
             {results.map(({ product, color }, index) => (
-              <Reveal key={`${product.id}-${color}`} delay={(index % 4) * 60}>
-                <ProductCard
-                  product={product}
-                  initialColor={color}
-                  priority={index < 4}
-                  sizes={
-                    density === "compact"
-                      ? "(min-width: 900px) 24vw, 48vw"
-                      : "(min-width: 900px) 32vw, (min-width: 640px) 48vw, 96vw"
-                  }
-                />
-              </Reveal>
+              <Fragment key={`${product.id}-${color}`}>
+                {/* Bundles sit in the grid like products, after the first row. */}
+                {showBundles && index === bundleSlot
+                  ? bundles.map((bundle, bundleIndex) => (
+                      <Reveal key={`bundle-${bundle.id}`} delay={(bundleIndex % 4) * 60}>
+                        <BundleProductCard bundle={bundle} sizes={cardSizes} />
+                      </Reveal>
+                    ))
+                  : null}
+                <Reveal delay={(index % 4) * 60}>
+                  <ProductCard
+                    product={product}
+                    initialColor={color}
+                    priority={index < 4}
+                    sizes={cardSizes}
+                  />
+                </Reveal>
+              </Fragment>
             ))}
+            {showBundles && bundleSlot >= results.length
+              ? bundles.map((bundle) => (
+                  <Reveal key={`bundle-${bundle.id}`}>
+                    <BundleProductCard bundle={bundle} sizes={cardSizes} />
+                  </Reveal>
+                ))
+              : null}
           </div>
         ) : (
           <div className="border border-border bg-paper px-6 py-16 text-center">
