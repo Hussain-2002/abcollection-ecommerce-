@@ -183,31 +183,36 @@ export function HeroBannersForm({ initial }: { initial: HeroBanner[] }) {
             </ol>
           )}
 
-          <Button
-            type="button"
-            variant="outline"
-            disabled={banners.length >= MAX_HERO_BANNERS}
-            onClick={() => {
-              setSaved(false);
-              setBanners((prev) => [...prev, newBanner()]);
-            }}
-          >
-            <Plus className="size-4" />
-            Add banner
-          </Button>
-          {banners.length >= MAX_HERO_BANNERS ? (
-            <p className="text-xs text-muted-foreground">Up to {MAX_HERO_BANNERS} banners.</p>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={banners.length >= MAX_HERO_BANNERS}
+              onClick={() => {
+                setSaved(false);
+                setBanners((prev) => [...prev, newBanner()]);
+              }}
+            >
+              <Plus className="size-4" />
+              Add banner
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              {banners.length} of {MAX_HERO_BANNERS} banners
+            </span>
+          </div>
 
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          {saved ? (
-            <p className="text-sm text-emerald-700">Saved. The homepage updates within a minute.</p>
-          ) : null}
-
-          <Button type="submit" disabled={saving} className="bg-teal text-teal-foreground">
-            {saving ? <Loader2 className="size-4 animate-spin" /> : null}
-            Save banners
-          </Button>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-5">
+            <Button type="submit" disabled={saving} className="bg-teal text-teal-foreground">
+              {saving ? <Loader2 className="size-4 animate-spin" /> : null}
+              Save banners
+            </Button>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {saved ? (
+              <p className="text-sm text-emerald-700">
+                Saved. The homepage updates within a minute.
+              </p>
+            ) : null}
+          </div>
         </form>
       </Card>
     </div>
