@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Reveal } from "@/components/Reveal";
+import { BundleProductCard } from "@/components/bundles/Bundles";
 import { LineIcon } from "@/components/site/Brand";
 import { ProductCard } from "@/components/site/ProductCard";
 import { ProductImage } from "@/components/site/ProductImage";
@@ -13,8 +14,10 @@ import { StarRating } from "@/components/site/StarRating";
 import { VariantSelectDialog } from "@/components/site/VariantSelectDialog";
 import { productImageForColor } from "@/lib/cart-display";
 import type { Collection, Product } from "@/lib/catalog-types";
+import { HERO_BANNER_SIZES, type HeroBanner } from "@/lib/home-banners";
 import { variantHasStock } from "@/lib/inventory";
 import type { PublicReview, ReviewSummary } from "@/lib/reviews";
+import type { BundleOfferView } from "@/lib/store-offers";
 import { SITE_INSTAGRAM } from "@/lib/site";
 import {
   TRUST_POINTS,
@@ -66,8 +69,8 @@ function MoreLink({ href, children }: { href: string; children: React.ReactNode 
   );
 }
 
-export function HomeHero({ products }: { products: Product[] }) {
-  const slides = heroSlides(products);
+export function HomeHero({ products, banners }: { products: Product[]; banners: HeroBanner[] }) {
+  const slides = heroSlides(products, banners);
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -92,7 +95,7 @@ export function HomeHero({ products }: { products: Product[] }) {
     >
       {slides.map((slide, index) => (
         <div
-          key={slide.desktop}
+          key={`${index}-${slide.desktop}`}
           className={cn(
             "absolute inset-0 transition-opacity duration-[1200ms] ease-[var(--ease-brand)]",
             index === active ? "opacity-100" : "opacity-0",
@@ -104,8 +107,8 @@ export function HomeHero({ products }: { products: Product[] }) {
             <img
               src={slide.desktop}
               alt={slide.alt}
-              width={1672}
-              height={941}
+              width={HERO_BANNER_SIZES.desktop.width}
+              height={HERO_BANNER_SIZES.desktop.height}
               loading={index === 0 ? "eager" : "lazy"}
               fetchPriority={index === 0 ? "high" : "auto"}
               decoding="async"
@@ -155,7 +158,7 @@ export function HomeHero({ products }: { products: Product[] }) {
         <div className="absolute right-[var(--page-pad)] bottom-[clamp(1.6rem,6vh,4rem)] z-[3] flex gap-1.5 max-sm:top-[calc(var(--header-h)+0.5rem)] max-sm:right-auto max-sm:bottom-auto max-sm:left-[var(--page-pad)]">
           {slides.map((slide, index) => (
             <button
-              key={slide.desktop}
+              key={`${index}-${slide.desktop}`}
               type="button"
               aria-label={`Show slide ${index + 1}: ${slide.alt}`}
               aria-current={index === active}
@@ -249,6 +252,31 @@ export function HomeNewArrivals({ products }: { products: Product[] }) {
           {products.slice(0, 8).map((product, index) => (
             <Reveal key={product.id} delay={(index % 4) * 70}>
               <ProductCard product={product} />
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function HomeBundles({ bundles }: { bundles: BundleOfferView[] }) {
+  if (!bundles.length) return null;
+  return (
+    <section className="pb-[clamp(3.5rem,8vw,7rem)]" aria-labelledby="bundles-heading">
+      <div className="page-wrap">
+        <Reveal>
+          <SectionHead
+            eyebrow="Bundles"
+            title="Better together"
+            id="bundles-heading"
+            action={<MoreLink href="/collection">Shop all</MoreLink>}
+          />
+        </Reveal>
+        <div className="grid grid-cols-2 gap-x-2.5 gap-y-7 min-[900px]:grid-cols-4 min-[900px]:gap-x-4 min-[900px]:gap-y-10">
+          {bundles.map((bundle, index) => (
+            <Reveal key={bundle.id} delay={(index % 4) * 70}>
+              <BundleProductCard bundle={bundle} sizes="(min-width: 900px) 25vw, 50vw" />
             </Reveal>
           ))}
         </div>

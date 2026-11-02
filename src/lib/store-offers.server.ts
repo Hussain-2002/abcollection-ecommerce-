@@ -28,6 +28,7 @@ type BundleRow = {
   deleted_at: string | null;
   sort_order: number;
   images?: string[] | null;
+  featured?: boolean | null;
 };
 
 function mapRow(row: BundleRow): BundleOffer {
@@ -49,6 +50,7 @@ function mapRow(row: BundleRow): BundleOffer {
     startsAt: row.starts_at ?? "",
     endsAt: row.ends_at ?? "",
     active: row.active,
+    featured: row.featured ?? false,
     deletedAt: row.deleted_at,
     sortOrder: row.sort_order,
     images: row.images ?? [],
@@ -69,6 +71,7 @@ function toInsert(offer: BundleOffer) {
     starts_at: offer.startsAt || null,
     ends_at: offer.endsAt || null,
     active: offer.active,
+    featured: offer.featured ?? false,
     deleted_at: offer.deletedAt ?? null,
     sort_order: offer.sortOrder,
     images: offer.images ?? [],
@@ -102,6 +105,16 @@ export async function getActiveBundleViews(): Promise<BundleOfferView[]> {
   const [offers, products] = await Promise.all([getBundleOffers(), getProducts()]);
   return offers
     .filter((offer) => isBundleOfferActive(offer))
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title))
+    .map((offer) => toBundleOfferView(offer, products))
+    .filter((view): view is BundleOfferView => view != null);
+}
+
+/** Active bundles the admin marked "Featured on homepage". */
+export async function getFeaturedBundleViews(): Promise<BundleOfferView[]> {
+  const [offers, products] = await Promise.all([getBundleOffers(), getProducts()]);
+  return offers
+    .filter((offer) => offer.featured && isBundleOfferActive(offer))
     .sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title))
     .map((offer) => toBundleOfferView(offer, products))
     .filter((view): view is BundleOfferView => view != null);
@@ -168,8 +181,13 @@ export async function saveBundleOffer(offer: BundleOffer, mode: "create" | "upda
       "Bundle photos need a database update first: run supabase/migrations/20261101170000_bundle_images.sql.",
     );
   }
-  // Older databases may miss newer columns (pricing, images): save the basics.
-  if (error && /pricing_type|discount_percent|images/.test(error.message)) {
+  if (error && /featured/.test(error.message) && parsed.featured) {
+    throw new Error(
+      "Featuring bundles on the homepage needs a database update first: run supabase/migrations/20261102120000_home_banners_featured_bundles.sql.",
+    );
+  }
+  // Older databases may miss newer columns (pricing, images, featured): save the basics.
+  if (error && /pricing_type|discount_percent|images|featured/.test(error.message)) {
     const columnFallback = {
       id: payload.id,
       title: payload.title,

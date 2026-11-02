@@ -1,6 +1,8 @@
 import type { Collection, Product } from "@/lib/catalog-types";
 import { productImageForColor } from "@/lib/cart-display";
+import type { HeroBanner } from "@/lib/home-banners";
 import { productHasPurchasableStock } from "@/lib/inventory";
+import { cdnImageUrl } from "@/lib/media";
 import { getImageIndicesForColor } from "@/lib/product-colors";
 import { formatInr, parsePriceInr } from "@/lib/price";
 
@@ -52,7 +54,7 @@ export const TRUST_POINTS = [
   },
 ] as const;
 
-/** Home hero: art-directed flat-lays, landscape for desktop and portrait for phones. */
+/** Built-in home hero, used until banners are added in the admin. */
 const HERO_SLIDES = [
   {
     image: "everyday-tees",
@@ -73,7 +75,16 @@ const HERO_SLIDES = [
 
 export type HeroSlide = { desktop: string; mobile: string; alt: string; href: string };
 
-export function heroSlides(products: Product[]): HeroSlide[] {
+export function heroSlides(products: Product[], banners: HeroBanner[] = []): HeroSlide[] {
+  const custom = banners.filter((banner) => banner.active && banner.desktopImage);
+  if (custom.length) {
+    return custom.map((banner) => ({
+      desktop: cdnImageUrl(banner.desktopImage),
+      mobile: cdnImageUrl(banner.mobileImage || banner.desktopImage),
+      alt: banner.alt,
+      href: "/collection",
+    }));
+  }
   return HERO_SLIDES.map((slide) => {
     const product = products.find((row) => row.id === slide.productId);
     return {

@@ -12,7 +12,9 @@ export function BundlesTable({ bundles }: { bundles: BundleOffer[] }) {
       rowKey={(bundle) => bundle.id}
       placeholder="Search bundles"
       empty="No bundle offers configured."
-      getSearchText={(bundle) => `${bundle.title} ${bundle.id} ${bundleOfferStatus(bundle)}`}
+      getSearchText={(bundle) =>
+        `${bundle.title} ${bundle.id} ${bundleOfferStatus(bundle)} ${bundle.featured ? "featured" : ""}`
+      }
       columns={[
         {
           header: "Title",
@@ -32,6 +34,15 @@ export function BundlesTable({ bundles }: { bundles: BundleOffer[] }) {
             const status = bundleOfferStatus(bundle);
             return <StatusPill status={status}>{status}</StatusPill>;
           },
+        },
+        {
+          header: "Homepage",
+          className: "hidden md:table-cell",
+          cell: (bundle) => (
+            <StatusPill status={bundle.featured ? "featured" : "standard"}>
+              {bundle.featured ? "Featured" : "Standard"}
+            </StatusPill>
+          ),
         },
         {
           header: "Actions",

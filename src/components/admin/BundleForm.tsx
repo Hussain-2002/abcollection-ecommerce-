@@ -29,6 +29,7 @@ const emptyBundle = (): BundleOffer => ({
   startsAt: "",
   endsAt: "",
   active: true,
+  featured: false,
   sortOrder: 0,
   images: [],
 });
@@ -301,6 +302,16 @@ export function BundleForm({
             }
           />
           Active
+        </label>
+
+        <label className="flex items-center gap-3 text-sm">
+          <Checkbox
+            checked={form.featured ?? false}
+            onCheckedChange={(checked) =>
+              setForm((prev) => ({ ...prev, featured: checked === true }))
+            }
+          />
+          Featured on homepage
         </label>
 
         <div>

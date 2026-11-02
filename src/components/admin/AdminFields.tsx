@@ -16,7 +16,7 @@ export async function uploadAdminImage(file: File): Promise<string> {
 
 const MIN_PRODUCT_PHOTO_WIDTH = 1200;
 
-function readImageSize(file: File) {
+export function readImageSize(file: File) {
   return new Promise<{ width: number; height: number }>((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();

@@ -1,5 +1,6 @@
 import {
   HomeBestsellers,
+  HomeBundles,
   HomeFits,
   HomeHero,
   HomeInstagram,
@@ -12,9 +13,11 @@ import {
 import { HomeJourney } from "@/components/journey/Journey";
 import { getCatalog } from "@/lib/catalog.server";
 import { mostViewed } from "@/lib/founder-journey";
+import { getHeroBanners } from "@/lib/home-banners.server";
 import { getFounderReels } from "@/lib/instagram.server";
 import { listLatestPublicReviews } from "@/lib/reviews.server";
 import { catalogImageUrl } from "@/lib/media";
+import { getFeaturedBundleViews } from "@/lib/store-offers.server";
 import { JsonLd, breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 
 export const revalidate = 60;
@@ -28,19 +31,22 @@ export const metadata = buildPageMetadata({
 });
 
 export default async function HomePage() {
-  const [catalog, latest, founder] = await Promise.all([
+  const [catalog, latest, founder, banners, bundles] = await Promise.all([
     getCatalog(),
     // Reviews are a nice-to-have on the home page; never block it on them.
     listLatestPublicReviews(9).catch(() => null),
     getFounderReels(),
+    getHeroBanners(),
+    getFeaturedBundleViews().catch(() => []),
   ]);
 
   return (
     <>
       <JsonLd data={breadcrumbJsonLd([{ name: "Home", path: "/" }])} />
-      <HomeHero products={catalog.products} />
+      <HomeHero products={catalog.products} banners={banners} />
       <HomeFits collections={catalog.collections} products={catalog.products} />
       <HomeNewArrivals products={catalog.products} />
+      <HomeBundles bundles={bundles} />
       <HomeStory products={catalog.products} />
       <HomeJourney reels={mostViewed(founder.reels, 8)} />
       <HomeBestsellers products={catalog.products} />

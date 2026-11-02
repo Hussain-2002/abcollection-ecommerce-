@@ -21,6 +21,8 @@ export const bundleOfferSchema = z.object({
   startsAt: z.string().trim().max(40).optional().or(z.literal("")),
   endsAt: z.string().trim().max(40).optional().or(z.literal("")),
   active: z.boolean().default(true),
+  /** Also shown in the homepage bundles section while active. */
+  featured: z.boolean().default(false),
   deletedAt: z.string().trim().max(40).nullable().optional(),
   sortOrder: z.number().int().min(0).max(9999).default(0),
   /** Bundle photos, first one is the cover. */

@@ -19,7 +19,7 @@ export default async function AdminBundlesPage() {
     <>
       <AdminPageHeader
         title="Bundle offers"
-        description="Active bundles appear on product pages for included items."
+        description="Active bundles appear in the shop and on product pages for included items. Featured bundles also show on the homepage."
         actions={
           <Button asChild className="bg-teal text-teal-foreground hover:bg-teal/90">
             <Link href="/admin/bundles/new">Add bundle</Link>

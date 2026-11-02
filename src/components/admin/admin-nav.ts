@@ -4,6 +4,7 @@ import {
   Crown,
   BarChart3,
   Gift,
+  Images,
   Layers,
   LayoutDashboard,
   Package,
@@ -56,6 +57,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   {
     label: "Marketing",
     items: [
+      { href: "/admin/banners", label: "Banners", icon: Images },
       { href: "/admin/coupons", label: "Coupons", icon: Ticket },
       { href: "/admin/bundles", label: "Bundles", icon: Gift },
       { href: "/admin/reviews", label: "Reviews", icon: Star },
